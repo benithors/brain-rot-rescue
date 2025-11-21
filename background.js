@@ -109,20 +109,13 @@ chrome.webNavigation.onBeforeNavigate.addListener(
       allowedNavigations.delete(tabId);
     }
 
-    const blockedHost = getBlockedEntryForUrl(details.url);
-    if (!blockedHost) return;
+  const blockedHost = getBlockedEntryForUrl(details.url);
+  if (!blockedHost) return;
 
-    if (isCooldownActive(blockedHost)) {
-      return;
-    }
-
-    const nextEntry = await pickNextReadingListEntry();
-
-    if (nextEntry) {
-      await redirectTabToEntry(tabId, blockedHost, details.url, nextEntry);
-    } else {
-      await sendTabToFallback(tabId, blockedHost, details.url);
-    }
+  if (isCooldownActive(blockedHost)) {
+    return;
+  }
+  await sendTabToDashboard(tabId, blockedHost, details.url);
   },
   { url: [{ schemes: ['http', 'https'] }] }
 );
@@ -375,6 +368,19 @@ async function sendTabToFallback(tabId, blockedHost, originalUrl) {
     await chrome.tabs.update(tabId, { url: focusUrl.toString() });
   } catch (error) {
     console.error('Failed to open fallback page', error);
+  }
+}
+
+async function sendTabToDashboard(tabId, blockedHost, originalUrl) {
+  const dashUrl = new URL(chrome.runtime.getURL('dashboard/dashboard.html'));
+  dashUrl.searchParams.set('blocked', blockedHost);
+  dashUrl.searchParams.set('original', originalUrl);
+  dashUrl.searchParams.set('cooldown', String(settings.cooldownMinutes));
+  dashUrl.searchParams.set('holdMs', String(HOLD_TO_OVERRIDE_MS));
+  try {
+    await chrome.tabs.update(tabId, { url: dashUrl.toString() });
+  } catch (error) {
+    console.error('Failed to open dashboard page', error);
   }
 }
 
