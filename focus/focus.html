@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brain-Rot Rescue Focus Mode</title>
+    <link rel="stylesheet" href="focus.css" />
+  </head>
+  <body>
+    <main class="focus-shell">
+      <section class="focus-card" aria-live="polite">
+        <header class="focus-header">
+          <p class="focus-pill">Brain-Rot Rescue</p>
+          <h1 id="focus-title">Reading list is empty</h1>
+          <p id="focus-lead" class="focus-lead"></p>
+        </header>
+        <ul class="focus-steps">
+          <li>
+            Open any article that inspires you.
+          </li>
+          <li>
+            Click the extension icon → “Add current tab to Reading List”.
+          </li>
+          <li>
+            Come back the next time a doom-scroll impulse hits.
+          </li>
+        </ul>
+        <div class="focus-actions">
+          <button type="button" id="focus-check" class="focus-btn focus-btn--ghost">Check again</button>
+          <div class="focus-hold-block">
+            <p class="focus-hold-label" id="focus-hold-label"></p>
+            <button type="button" id="focus-override" class="focus-hold-btn">
+              <span data-role="hold-label"></span>
+            </button>
+            <p class="focus-hold-hint" id="focus-hint"></p>
+          </div>
+        </div>
+        <p class="focus-status" id="focus-status" role="status" aria-live="polite" hidden></p>
+      </section>
+    </main>
+    <script type="module" src="focus.js"></script>
+  </body>
+</html>
