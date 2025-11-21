@@ -6,6 +6,17 @@ const originalUrl = params.get('original') || '';
 const cooldownMinutes = Number(params.get('cooldown')) || 15;
 const holdDurationMs = Number(params.get('holdMs')) || 5000;
 
+const RECURRING_STORAGE_KEY = 'dashboardRecurring';
+const RECURRING_DEFAULTS = [
+  {
+    id: 'journal',
+    label: 'Write journal',
+    description: 'Capture today in Obsidian.',
+    actionLabel: 'Open Obsidian',
+    actionUrl: 'obsidian://open'
+  }
+];
+
 // Elements that might exist in the new layout
 const overrideCard = document.getElementById('override-card');
 const overrideTitle = document.getElementById('override-title');
@@ -21,11 +32,17 @@ const blockChartLabelsEl = document.getElementById('block-chart-labels');
 const blockChartFootnoteEl = document.getElementById('block-chart-footnote');
 const metricAttemptsEl = document.getElementById('metric-attempts');
 const metricSavedEl = document.getElementById('metric-saved');
+const statTotalSavedEl = document.getElementById('stat-total-saved');
+const statSitesBlockedEl = document.getElementById('stat-sites-blocked');
 
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
 const todoListEl = document.getElementById('todo-list');
 const toggleDoneEl = document.getElementById('toggle-done');
+
+const recurringListEl = document.getElementById('recurring-list');
+const recurringEmptyEl = document.getElementById('recurring-empty');
+const recurringResetEl = document.getElementById('recurring-reset-label');
 
 const clockLabel = document.getElementById('clock-label');
 const asciiClockEl = document.getElementById('ascii-clock');
@@ -33,6 +50,7 @@ const asciiClockEl = document.getElementById('ascii-clock');
 let currentTabId = null;
 let todos = [];
 let showDone = false;
+let recurringTasks = [];
 
 init();
 
@@ -44,6 +62,7 @@ async function init() {
   startAsciiClock();
   bindBlockStats();
   bindReadingList();
+  bindRecurringTasks();
   bindTodos();
 }
 
@@ -150,6 +169,7 @@ async function loadBlockStats() {
 
 function renderBlockStats(stats, error) {
   if (!blockChartEl) return;
+  updateSummaryStats(stats, error);
   blockChartEl.innerHTML = '';
   blockChartLabelsEl.innerHTML = '';
 
@@ -229,6 +249,26 @@ function renderBlockStats(stats, error) {
       lifetimeAttempts
     )} · Retention ${stats.retentionDays}d`;
   }
+}
+
+function updateSummaryStats(stats, error) {
+  const setStats = (savedLabel, blockedLabel) => {
+    if (statTotalSavedEl) statTotalSavedEl.textContent = savedLabel;
+    if (statSitesBlockedEl) statSitesBlockedEl.textContent = blockedLabel;
+  };
+
+  if (error || !stats) {
+    setStats('--', '--');
+    return;
+  }
+
+  const totalSavedMs = stats.lifetime?.savedMs ?? 0;
+  const totalBlocks = stats.lifetime?.count ?? 0;
+
+  setStats(
+    formatDuration(totalSavedMs, { short: true }),
+    totalBlocks.toLocaleString()
+  );
 }
 
 function bindReadingList() {
@@ -311,6 +351,153 @@ async function navigate(url) {
   } catch (error) {
     console.error('Navigation failed', error);
   }
+}
+
+function bindRecurringTasks() {
+  if (!recurringListEl || !recurringEmptyEl) return;
+  loadRecurringTasks();
+}
+
+async function loadRecurringTasks() {
+  const today = getTodayKey();
+  let stored = [];
+  try {
+    const storedValue = await chrome.storage.local.get(RECURRING_STORAGE_KEY);
+    stored = Array.isArray(storedValue[RECURRING_STORAGE_KEY])
+      ? storedValue[RECURRING_STORAGE_KEY]
+      : [];
+  } catch (_error) {
+    stored = [];
+  }
+  recurringTasks = mergeRecurringDefaults(stored).map((task) => {
+    const last = typeof task.lastCompletedOn === 'string' ? task.lastCompletedOn : null;
+    return {
+      ...task,
+      lastCompletedOn: last || null,
+      errorMessage: ''
+    };
+  });
+  if (recurringResetEl) recurringResetEl.textContent = `Resets daily • ${formatDayLabel(today)}`;
+  renderRecurringTasks();
+  saveRecurringTasks();
+}
+
+function mergeRecurringDefaults(stored) {
+  const map = new Map(
+    stored
+      .filter((item) => item && typeof item.id === 'string')
+      .map((item) => [item.id, item])
+  );
+  const merged = RECURRING_DEFAULTS.map((task) => ({
+    ...task,
+    ...(map.get(task.id) || {})
+  }));
+  stored.forEach((task) => {
+    if (!merged.find((t) => t.id === task.id)) merged.push(task);
+  });
+  return merged;
+}
+
+async function saveRecurringTasks() {
+  const payload = recurringTasks.map(({ errorMessage, ...task }) => task);
+  await chrome.storage.local.set({ [RECURRING_STORAGE_KEY]: payload });
+}
+
+function renderRecurringTasks() {
+  if (!recurringListEl || !recurringEmptyEl) return;
+  recurringListEl.innerHTML = '';
+  const today = getTodayKey();
+  const active = recurringTasks.filter((task) => task.lastCompletedOn !== today);
+
+  if (!active.length) {
+    recurringEmptyEl.hidden = false;
+    return;
+  }
+  recurringEmptyEl.hidden = true;
+  active.forEach((task) => {
+    const card = document.createElement('div');
+    const done = task.lastCompletedOn === today;
+    card.className = `recurring-card${done ? ' recurring-card_done' : ''}`;
+
+    const details = document.createElement('div');
+    details.className = 'recurring-details';
+
+    const title = document.createElement('div');
+    title.className = 'recurring-title';
+    title.textContent = task.label || 'Untitled Task';
+
+    const status = document.createElement('div');
+    status.className = 'recurring-status';
+    if (task.errorMessage) {
+      status.textContent = `Error: ${task.errorMessage}`;
+    } else if (done) {
+      status.textContent = 'Done today';
+    } else {
+      status.textContent = 'Ready • opens external app';
+    }
+
+    details.append(title, status);
+
+    const actions = document.createElement('div');
+    actions.className = 'recurring-actions';
+
+    const openBtn = document.createElement('button');
+    openBtn.className = 'btn-inline recurring-action';
+    openBtn.textContent = done ? '[ OPEN AGAIN ]' : `[ ${task.actionLabel || 'OPEN'} ]`;
+    openBtn.addEventListener('click', () => handleRecurringAction(task.id));
+
+    const doneChip = document.createElement('span');
+    doneChip.className = 'chip';
+    doneChip.textContent = done ? 'DONE' : 'PENDING';
+
+    actions.append(openBtn, doneChip);
+
+    card.append(details, actions);
+    recurringListEl.appendChild(card);
+  });
+}
+
+async function handleRecurringAction(taskId) {
+  const task = recurringTasks.find((t) => t.id === taskId);
+  if (!task) return;
+  try {
+    await launchRecurringAction(task);
+    await markRecurringDone(taskId);
+  } catch (error) {
+    recurringTasks = recurringTasks.map((t) =>
+      t.id === taskId ? { ...t, errorMessage: error?.message || 'Action failed' } : t
+    );
+    renderRecurringTasks();
+  }
+}
+
+async function launchRecurringAction(task) {
+  if (task.actionUrl) {
+    try {
+      await chrome.tabs.create({ url: task.actionUrl });
+      return;
+    } catch (_error) {
+      // Fall through to other strategies
+    }
+    if (currentTabId) {
+      try {
+        await chrome.tabs.update(currentTabId, { url: task.actionUrl });
+        return;
+      } catch (_error) {
+        // Fall through to window.open
+      }
+    }
+    window.open(task.actionUrl, '_blank', 'noopener');
+  }
+}
+
+async function markRecurringDone(taskId) {
+  const today = getTodayKey();
+  recurringTasks = recurringTasks.map((task) =>
+    task.id === taskId ? { ...task, lastCompletedOn: today, errorMessage: '' } : task
+  );
+  await saveRecurringTasks();
+  renderRecurringTasks();
 }
 
 function bindTodos() {
@@ -409,6 +596,14 @@ function deleteTodo(id) {
   todos = todos.filter((t) => t.id !== id);
   saveTodos();
   renderTodos();
+}
+
+function getTodayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatDuration(ms, options = {}) {

@@ -14,45 +14,29 @@
 <body>
   <div class="screen-overlay"></div>
   <div class="container">
-    <!-- HEADER -->
-    <header class="top-bar">
-      <div class="top-bar__left">
-        <button class="icon-btn" aria-label="Back">&lt;&lt;</button>
-      </div>
-      <div class="top-bar__center">
-        <h1>AGENT DATA OVERVIEW</h1>
-        <div class="sub-header">Last Update <span id="clock-label">--:--:--</span></div>
-      </div>
-      <div class="top-bar__right">
-        <span class="status-dot"></span>
-        <span class="status-dot"></span>
-        <span class="status-dot"></span>
-      </div>
-    </header>
-
     <!-- MAIN GRID -->
     <main class="main-grid">
 
       <!-- LEFT COLUMN: READING LIST (INTEL) -->
       <section class="panel panel--left">
         <div class="panel__header">
-          <h2>INTEL ARCHIVES</h2>
+          <h2>FOCUS STATS</h2>
           <div class="panel__stats">
-            <span>190</span>
-            <span>990</span>
-            <span>290</span>
-          </div>
-          <div class="panel__sub-labels">
-            <span>Active</span>
-            <span>Archived</span>
-            <span>Pending</span>
+            <div class="stat-card">
+              <div class="stat-card__label">Time Saved</div>
+              <div class="stat-card__value" id="stat-total-saved">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__label">Blocks</div>
+              <div class="stat-card__value" id="stat-sites-blocked">--</div>
+            </div>
           </div>
         </div>
 
         <div class="panel__content">
           <div class="list-header">
-            <span>ID</span>
-            <span>SOURCE DATA</span>
+            <span>Reading Queue</span>
+            <span>Actions</span>
           </div>
           <div id="reading-list" class="data-list">
             <!-- JS will populate this -->
@@ -77,9 +61,19 @@
           <!-- INPUT AREA -->
           <form id="todo-form" class="cmd-line">
             <span class="prompt">></span>
-            <input id="todo-input" type="text" name="todo" placeholder="INPUT DIRECTIVE..." autocomplete="off" />
+            <input id="todo-input" type="text" name="todo" placeholder="ADD TASK..." autocomplete="off" />
             <button type="submit" hidden>EXECUTE</button>
           </form>
+
+          <!-- RECURRING TASKS -->
+          <div class="recurring-section">
+            <div class="recurring-head">
+              <span>RECURRING TASKS</span>
+              <span id="recurring-reset-label" class="muted">Resets daily</span>
+            </div>
+            <div id="recurring-list" class="recurring-list"></div>
+            <div id="recurring-empty" class="muted recurring-empty" hidden>> NO RECURRING TASKS.</div>
+          </div>
 
           <div class="divider"></div>
 

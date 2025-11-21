@@ -53,8 +53,8 @@ button {
 /* --- HEADER --- */
 .top-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   border-bottom: 1px solid var(--border);
   padding-bottom: 10px;
 }
@@ -74,25 +74,6 @@ button {
   color: var(--muted);
   font-size: 10px;
   margin-top: 4px;
-}
-
-.top-bar__right {
-  display: flex;
-  gap: 8px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid var(--muted);
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 16px;
 }
 
 /* --- MAIN GRID --- */
@@ -117,6 +98,10 @@ button {
 .panel__header {
   border-bottom: 1px solid var(--border);
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .panel h2 {
@@ -138,36 +123,44 @@ button {
 
 /* --- LEFT PANEL (READING) --- */
 .panel__stats {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 8px;
-  font-size: 14px;
-  font-weight: bold;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 12px;
+  width: 100%;
+  padding: 6px 4px 2px;
 }
 
-.panel__stats span {
-  flex: 1;
+.stat-card {
+  border: 1px solid var(--border);
+  padding: 12px 10px;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.01)
+    );
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 86px;
   text-align: center;
-  border-right: 1px solid var(--border);
 }
 
-.panel__stats span:last-child {
-  border-right: none;
-}
-
-.panel__sub-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
+.stat-card__label {
+  font-size: 10px;
   color: var(--muted);
-  padding-top: 4px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.panel__sub-labels span {
-  flex: 1;
-  text-align: center;
+.stat-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .list-header {
@@ -298,6 +291,81 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.recurring-section {
+  border: 1px solid var(--border);
+  padding: 10px;
+  margin: 6px 0 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.recurring-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recurring-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.recurring-card:last-child {
+  border-bottom: none;
+}
+
+.recurring-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recurring-title {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.recurring-status {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.recurring-card_done .recurring-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.recurring-card_done .recurring-status {
+  color: var(--fg);
+}
+
+.recurring-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recurring-action {
+  font-size: 10px;
+}
+
+.recurring-empty {
+  font-size: 10px;
 }
 
 .todo-item {
