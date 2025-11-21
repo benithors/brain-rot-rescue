@@ -6,11 +6,10 @@ const originalUrl = params.get('original') || '';
 const cooldownMinutes = Number(params.get('cooldown')) || 15;
 const holdDurationMs = Number(params.get('holdMs')) || 5000;
 
-const heroLede = document.getElementById('hero-lede');
+// Elements that might exist in the new layout
 const overrideCard = document.getElementById('override-card');
 const overrideTitle = document.getElementById('override-title');
 const overrideHint = document.getElementById('override-hint');
-const overridePill = document.getElementById('override-pill');
 const overrideButton = document.getElementById('override-button');
 
 const readingListEl = document.getElementById('reading-list');
@@ -23,17 +22,7 @@ const todoListEl = document.getElementById('todo-list');
 const toggleDoneEl = document.getElementById('toggle-done');
 
 const clockLabel = document.getElementById('clock-label');
-const clockHands = {
-  hour: document.querySelector('[data-hand="hour"]'),
-  minute: document.querySelector('[data-hand="minute"]'),
-  second: document.querySelector('[data-hand="second"]')
-};
-// Track cumulative turns so the hands never sweep backward when they wrap.
-const handRotationState = {
-  hour: { prev: null, turns: 0 },
-  minute: { prev: null, turns: 0 },
-  second: { prev: null, turns: 0 }
-};
+const asciiClockEl = document.getElementById('ascii-clock');
 
 let currentTabId = null;
 let todos = [];
@@ -42,13 +31,11 @@ let showDone = false;
 init();
 
 async function init() {
-  heroLede.textContent = blockedHost
-    ? `We paused ${blockedHost}. Take a breath, pick a saved read, or nudge one to-do forward.`
-    : 'Set the tone for the day. Pick a saved read or capture a quick task before you browse.';
-
+  // No hero lede in new design
   await resolveTab();
   setupOverride();
   attachClock();
+  startAsciiClock();
   bindReadingList();
   bindTodos();
 }
@@ -64,25 +51,27 @@ async function resolveTab() {
 
 function setupOverride() {
   if (!overrideCard) return;
+
+  const labelSpan = overrideButton.querySelector('[data-role="hold-label"]');
+
   if (!blockedHost || !originalUrl) {
-    overridePill.textContent = 'No override needed';
-    overrideTitle.textContent = 'Browse intentionally';
-    overrideHint.textContent = 'Open a saved article or capture a to-do before you jump elsewhere.';
+    overrideTitle.textContent = 'SYSTEM IDLE';
+    overrideHint.textContent = '> WAITING FOR INTERVENTION...';
     overrideButton.disabled = true;
-    overrideButton.querySelector('[data-role="hold-label"]').textContent = 'Override unavailable';
+    overrideButton.classList.add('muted');
+    if (labelSpan) labelSpan.textContent = 'NO THREAT DETECTED';
     return;
   }
 
   const seconds = Math.round(holdDurationMs / 1000);
-  overridePill.textContent = 'Blocked site';
-  overrideTitle.textContent = `Hold to visit ${blockedHost}`;
-  overrideHint.textContent = `Override snoozes blocking for ${formatMinutes(cooldownMinutes)}.`;
+  overrideTitle.textContent = `THREAT DETECTED: ${blockedHost}`;
+  overrideHint.textContent = `> OVERRIDE PROTOCOL: ${formatMinutes(cooldownMinutes)} WINDOW`;
 
   attachHoldToOverride(overrideButton, {
     durationMs: holdDurationMs,
     progressVar: '--hold-progress',
-    completedLabel: 'Redirecting…',
-    formatLabel: ({ remainingMs }) => `Keep holding… ${Math.ceil(remainingMs / 1000)}s`,
+    completedLabel: 'ACCESS GRANTED',
+    formatLabel: ({ remainingMs }) => `HOLD TO BYPASS... ${Math.ceil(remainingMs / 1000)}s`,
     onFinalize: () => {
       overrideButton.classList.add('hold-btn--active');
     },
@@ -99,72 +88,35 @@ function setupOverride() {
         }
       });
       if (response?.status !== 'ok') {
-        throw new Error(response?.message || 'Unable to override.');
+        throw new Error(response?.message || 'ACCESS DENIED.');
       }
     },
     onError: (error) => {
-      overrideHint.textContent = error?.message || 'Unable to override right now.';
+      overrideHint.textContent = error?.message || 'SYSTEM ERROR.';
       overrideButton.classList.remove('hold-btn--active');
     }
   });
-  overrideButton.querySelector('[data-role="hold-label"]').textContent = `Hold for ${seconds}s`;
+
+  if (labelSpan) labelSpan.textContent = `INITIATE OVERRIDE (${seconds}s)`;
 }
 
 function attachClock() {
-  if (!clockLabel || !clockHands.hour || !clockHands.minute || !clockHands.second) return;
+  if (!clockLabel) return;
 
   const formatter = new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
   });
-
-  let timerId = null;
 
   const sync = () => {
     const now = new Date();
-    const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
-    const minutes = now.getMinutes() + seconds / 60;
-    const hours = now.getHours() + minutes / 60;
-
-    setHandRotation(clockHands.second, seconds * 6, 'second');
-    setHandRotation(clockHands.minute, minutes * 6, 'minute');
-    setHandRotation(clockHands.hour, ((hours % 12) / 12) * 360, 'hour');
-
     clockLabel.textContent = formatter.format(now);
-
-    const delay = Math.max(16, 1000 - now.getMilliseconds());
-    timerId = setTimeout(sync, delay);
+    setTimeout(sync, 1000);
   };
 
-  const start = () => {
-    if (timerId) clearTimeout(timerId);
-    sync();
-  };
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      start();
-    } else if (timerId) {
-      clearTimeout(timerId);
-      timerId = null;
-    }
-  });
-
-  start();
-}
-
-function setHandRotation(el, deg, key) {
-  if (!el || !key) return;
-  const state = handRotationState[key] || { prev: null, turns: 0 };
-  let normalized = deg % 360;
-  if (normalized < 0) normalized += 360;
-  if (state.prev != null && normalized < state.prev) {
-    state.turns += 1;
-  }
-  state.prev = normalized;
-  const total = normalized + state.turns * 360;
-  handRotationState[key] = state;
-  el.style.setProperty('--rotation', `${total}deg`);
+  sync();
 }
 
 function bindReadingList() {
@@ -179,7 +131,7 @@ async function loadReadingList() {
     renderReading(entries || []);
   } catch (error) {
     readingEmptyEl.hidden = false;
-    readingEmptyEl.textContent = 'Reading List unavailable. Is the permission enabled?';
+    readingEmptyEl.textContent = '> ERROR: READING LIST UNAVAILABLE.';
     console.error('Reading List load failed', error);
   }
 }
@@ -192,35 +144,30 @@ function renderReading(entries) {
   }
   readingEmptyEl.hidden = true;
   entries.forEach((entry) => {
-    const card = document.createElement('article');
+    const card = document.createElement('div');
     card.className = 'reading-card';
-    card.role = 'listitem';
 
-    const title = document.createElement('p');
+    const title = document.createElement('div');
     title.className = 'reading-title';
-    title.textContent = entry.title || readableHost(entry.url) || 'Saved page';
-
-    const meta = document.createElement('p');
-    meta.className = 'reading-meta';
-    meta.textContent = `${readableHost(entry.url)} • ${relativeTime(entry.creationTime)}`;
+    title.textContent = entry.title || readableHost(entry.url) || 'UNKNOWN DATA';
+    title.title = entry.title; // Tooltip for full title
 
     const actions = document.createElement('div');
     actions.className = 'reading-actions';
 
     const openBtn = document.createElement('button');
-    openBtn.className = 'btn-inline primary';
-    openBtn.type = 'button';
-    openBtn.textContent = 'Open';
+    openBtn.className = 'btn-inline';
+    openBtn.textContent = '[ OPEN ]';
     openBtn.addEventListener('click', () => navigate(entry.url));
 
     const markBtn = document.createElement('button');
     markBtn.className = 'btn-inline';
-    markBtn.type = 'button';
-    markBtn.textContent = 'Mark read';
+    markBtn.textContent = 'X';
+    markBtn.title = 'Mark as Read';
     markBtn.addEventListener('click', () => markEntry(entry));
 
     actions.append(openBtn, markBtn);
-    card.append(title, meta, actions);
+    card.append(title, actions);
     readingListEl.appendChild(card);
   });
 }
@@ -240,18 +187,6 @@ function readableHost(url) {
   } catch (_error) {
     return url;
   }
-}
-
-function relativeTime(timestamp) {
-  if (!timestamp) return 'just now';
-  const delta = Date.now() - timestamp;
-  const minutes = Math.round(delta / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `${days}d ago`;
 }
 
 async function navigate(url) {
@@ -298,7 +233,8 @@ function renderTodos() {
   if (!filtered.length) {
     const empty = document.createElement('li');
     empty.className = 'muted';
-    empty.textContent = showDone ? 'No to-dos yet.' : 'Nothing open right now.';
+    empty.style.padding = '8px';
+    empty.textContent = showDone ? '> NO LOGS FOUND.' : '> NO ACTIVE DIRECTIVES.';
     todoListEl.appendChild(empty);
     return;
   }
@@ -306,7 +242,8 @@ function renderTodos() {
     const item = document.createElement('li');
     item.className = 'todo-item';
     item.dataset.id = todo.id;
-    item.draggable = true;
+    // Drag and drop logic removed for simplicity in this view, or can be re-added if needed.
+    // Keeping it simple for now to match the "log" aesthetic.
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -316,14 +253,13 @@ function renderTodos() {
     const text = document.createElement('div');
     text.textContent = todo.text;
     text.className = todo.done ? 'todo-text_done' : '';
+    text.style.flex = '1';
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.setAttribute('aria-label', 'Delete');
-    deleteBtn.innerHTML = '✕';
+    deleteBtn.innerHTML = '[ DEL ]';
     deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
     item.append(checkbox, text, deleteBtn);
-    wireDrag(item);
     todoListEl.appendChild(item);
   });
 }
@@ -360,41 +296,66 @@ function deleteTodo(id) {
   renderTodos();
 }
 
-function wireDrag(item) {
-  item.addEventListener('dragstart', (event) => {
-    event.dataTransfer.setData('text/plain', item.dataset.id);
-    item.classList.add('dragging');
-  });
-  item.addEventListener('dragend', () => item.classList.remove('dragging'));
-  item.addEventListener('dragover', (event) => {
-    event.preventDefault();
-  });
-  item.addEventListener('drop', (event) => {
-    event.preventDefault();
-    const draggingId = str(event.dataTransfer.getData('text/plain'));
-    const targetId = item.dataset.id;
-    if (!draggingId || draggingId === targetId) return;
-    const fromIndex = todos.findIndex((t) => t.id === draggingId);
-    const toIndex = todos.findIndex((t) => t.id === targetId);
-    if (fromIndex === -1 || toIndex === -1) return;
-    reorderTodos(fromIndex, toIndex);
-  });
-}
-
-function reorderTodos(from, to) {
-  const copy = [...todos];
-  const [moved] = copy.splice(from, 1);
-  copy.splice(to, 0, moved);
-  todos = copy;
-  saveTodos();
-  renderTodos();
-}
-
-function str(value) {
-  return typeof value === 'string' ? value : '';
-}
-
 function formatMinutes(minutes) {
-  if (minutes === 1) return '1 minute';
-  return `${minutes} minutes`;
+  if (minutes === 1) return '1 MINUTE';
+  return `${minutes} MINUTES`;
+}
+
+function startAsciiClock() {
+  if (!asciiClockEl) return;
+
+  const size = 13; // Diameter (odd number for center)
+  const center = Math.floor(size / 2);
+  const radius = center;
+
+  const updateClock = () => {
+    const grid = Array.from({ length: size }, () => Array(size).fill(' '));
+    const now = new Date();
+
+    // Draw Face
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dist = Math.sqrt(Math.pow(x - center, 2) + Math.pow(y - center, 2));
+        // Circle border
+        if (dist >= radius - 0.5 && dist <= radius + 0.5) {
+          grid[y][x] = '.';
+        }
+      }
+    }
+
+    // Center
+    grid[center][center] = '+';
+
+    // Calculate angles
+    const seconds = now.getSeconds();
+    const minutes = now.getMinutes();
+    const hours = now.getHours() % 12;
+
+    const secAngle = (seconds / 60) * 2 * Math.PI - Math.PI / 2;
+    const minAngle = (minutes / 60) * 2 * Math.PI - Math.PI / 2;
+    const hourAngle = ((hours + minutes / 60) / 12) * 2 * Math.PI - Math.PI / 2;
+
+    // Draw Hands
+    const drawLine = (angle, length, char) => {
+      for (let r = 1; r <= length; r += 0.5) {
+        const x = Math.round(center + Math.cos(angle) * r);
+        const y = Math.round(center + Math.sin(angle) * r);
+        if (x >= 0 && x < size && y >= 0 && y < size) {
+          grid[y][x] = char;
+        }
+      }
+    };
+
+    drawLine(secAngle, radius - 1, '.'); // Second hand
+    drawLine(minAngle, radius - 2, 'o'); // Minute hand
+    drawLine(hourAngle, radius - 3, 'O'); // Hour hand
+
+    // Re-draw center to ensure it's on top if needed, or just keep it
+    grid[center][center] = '+';
+
+    asciiClockEl.textContent = grid.map(row => row.join(' ')).join('\n');
+  };
+
+  updateClock();
+  setInterval(updateClock, 1000);
 }
