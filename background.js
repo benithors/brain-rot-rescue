@@ -17,6 +17,10 @@ const DEFAULT_SETTINGS = {
   cooldownMinutes: DEFAULT_COOLDOWN_MINUTES
 };
 
+const SAVED_TIME_PER_BLOCK_MS = 5 * 60 * 1000; // Estimated focused time saved per block
+const BLOCK_EVENT_LIMIT = 500;
+const BLOCK_RETENTION_DAYS = 120;
+
 const clone = (value) => {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
@@ -26,6 +30,8 @@ const clone = (value) => {
 
 let settings = clone(DEFAULT_SETTINGS);
 let cooldowns = {};
+let blockEvents = [];
+let blockDailyTotals = {};
 const interceptSessions = new Map(); // tabId -> session metadata
 const allowedNavigations = new Map(); // tabId -> comparableUrl currently allowed
 
@@ -44,11 +50,13 @@ async function initializeState() {
   }
 
   try {
-    const storedLocal = await chrome.storage.local.get('cooldowns');
+    const storedLocal = await chrome.storage.local.get(['cooldowns', 'blockEvents', 'blockDailyTotals']);
     cooldowns = cleanupCooldownMap(storedLocal.cooldowns || {});
-    await chrome.storage.local.set({ cooldowns });
+    blockEvents = sanitizeBlockEvents(storedLocal.blockEvents || []);
+    blockDailyTotals = sanitizeDailyTotals(storedLocal.blockDailyTotals || {});
+    await chrome.storage.local.set({ cooldowns, blockEvents, blockDailyTotals });
   } catch (error) {
-    console.error('Failed to load cooldowns', error);
+    console.error('Failed to load local state', error);
   }
 }
 
@@ -64,6 +72,12 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
   if (areaName === 'local' && changes.cooldowns) {
     cooldowns = cleanupCooldownMap(changes.cooldowns.newValue || {});
+  }
+  if (areaName === 'local' && changes.blockEvents) {
+    blockEvents = sanitizeBlockEvents(changes.blockEvents.newValue || []);
+  }
+  if (areaName === 'local' && changes.blockDailyTotals) {
+    blockDailyTotals = sanitizeDailyTotals(changes.blockDailyTotals.newValue || {});
   }
 });
 
@@ -109,13 +123,18 @@ chrome.webNavigation.onBeforeNavigate.addListener(
       allowedNavigations.delete(tabId);
     }
 
-  const blockedHost = getBlockedEntryForUrl(details.url);
-  if (!blockedHost) return;
+    const blockedHost = getBlockedEntryForUrl(details.url);
+    if (!blockedHost) return;
 
-  if (isCooldownActive(blockedHost)) {
-    return;
-  }
-  await sendTabToDashboard(tabId, blockedHost, details.url);
+    if (isCooldownActive(blockedHost)) {
+      return;
+    }
+
+    recordBlockAttempt({ blockedHost, originalUrl: details.url }).catch((error) => {
+      console.error('Failed to record block attempt', error);
+    });
+
+    await sendTabToDashboard(tabId, blockedHost, details.url);
   },
   { url: [{ schemes: ['http', 'https'] }] }
 );
@@ -327,6 +346,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ status: 'ok' });
         return;
       }
+      case 'stats:get-block-activity': {
+        const days = typeof message.days === 'number' ? message.days : undefined;
+        const stats = getBlockStats(days);
+        sendResponse({ status: 'ok', stats });
+        return;
+      }
       default:
         sendResponse({ status: 'noop' });
     }
@@ -428,6 +453,137 @@ function cleanupExpiredCooldowns() {
   if (changed) {
     chrome.storage.local.set({ cooldowns }).catch(() => {});
   }
+}
+
+async function recordBlockAttempt({ blockedHost, originalUrl }) {
+  await initPromise;
+  const now = Date.now();
+  const event = {
+    ts: now,
+    host: blockedHost,
+    url: originalUrl,
+    savedMs: SAVED_TIME_PER_BLOCK_MS
+  };
+  blockEvents.push(event);
+
+  const dayKey = formatDayKey(now);
+  const totals = blockDailyTotals[dayKey] || { count: 0, savedMs: 0 };
+  blockDailyTotals = {
+    ...blockDailyTotals,
+    [dayKey]: {
+      count: (totals.count || 0) + 1,
+      savedMs: (totals.savedMs || 0) + event.savedMs
+    }
+  };
+
+  pruneBlockData();
+
+  await chrome.storage.local
+    .set({ blockEvents, blockDailyTotals })
+    .catch(() => {});
+
+  return event;
+}
+
+function getBlockStats(days = 14) {
+  pruneBlockData();
+  const windowDays = clampDays(days);
+  const recentKeys = getRecentDayKeys(windowDays);
+  const dayRows = recentKeys.map((dayKey) => {
+    const totals = blockDailyTotals[dayKey] || {};
+    return {
+      day: dayKey,
+      count: typeof totals.count === 'number' ? totals.count : 0,
+      savedMs: typeof totals.savedMs === 'number' ? totals.savedMs : 0
+    };
+  });
+
+  const windowSavedMs = dayRows.reduce((sum, row) => sum + row.savedMs, 0);
+  const windowCount = dayRows.reduce((sum, row) => sum + row.count, 0);
+  const lifetimeSavedMs = Object.values(blockDailyTotals).reduce(
+    (sum, totals) => sum + (totals?.savedMs || 0),
+    0
+  );
+  const lifetimeCount = Object.values(blockDailyTotals).reduce(
+    (sum, totals) => sum + (totals?.count || 0),
+    0
+  );
+
+  return {
+    days: dayRows,
+    window: { days: windowDays, savedMs: windowSavedMs, count: windowCount },
+    lifetime: { savedMs: lifetimeSavedMs, count: lifetimeCount },
+    savedMsPerBlock: SAVED_TIME_PER_BLOCK_MS,
+    retentionDays: BLOCK_RETENTION_DAYS
+  };
+}
+
+function pruneBlockData() {
+  const cutoffTs = Date.now() - BLOCK_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  blockEvents = sanitizeBlockEvents(blockEvents, cutoffTs);
+  blockDailyTotals = sanitizeDailyTotals(blockDailyTotals, cutoffTs);
+}
+
+function clampDays(days) {
+  const value = Number.isFinite(days) ? days : Number(days);
+  if (!Number.isFinite(value)) return 14;
+  return Math.min(90, Math.max(1, Math.round(value)));
+}
+
+function getRecentDayKeys(count) {
+  const keys = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let offset = count - 1; offset >= 0; offset -= 1) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - offset);
+    keys.push(formatDayKey(d.getTime()));
+  }
+  return keys;
+}
+
+function formatDayKey(timestamp) {
+  const d = new Date(timestamp);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function sanitizeBlockEvents(list, cutoffTs) {
+  if (!Array.isArray(list)) return [];
+  const cutoff = cutoffTs ?? Date.now() - BLOCK_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const cleaned = list
+    .filter((item) => item && typeof item.ts === 'number' && item.ts >= cutoff)
+    .map((item) => ({
+      ts: item.ts,
+      host: typeof item.host === 'string' ? item.host : '',
+      url: typeof item.url === 'string' ? item.url : '',
+      savedMs:
+        typeof item.savedMs === 'number' && item.savedMs > 0
+          ? Math.round(item.savedMs)
+          : SAVED_TIME_PER_BLOCK_MS
+    }));
+  cleaned.sort((a, b) => a.ts - b.ts);
+  return cleaned.slice(-BLOCK_EVENT_LIMIT);
+}
+
+function sanitizeDailyTotals(map, cutoffTs) {
+  const cutoff = cutoffTs ?? Date.now() - BLOCK_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  if (!map || typeof map !== 'object') return {};
+  const cutoffDayKey = formatDayKey(cutoff);
+  const next = {};
+  for (const [dayKey, totals] of Object.entries(map)) {
+    if (!dayKey || dayKey < cutoffDayKey) continue;
+    const count = typeof totals?.count === 'number' ? Math.max(0, Math.round(totals.count)) : 0;
+    const savedMs =
+      typeof totals?.savedMs === 'number' && totals.savedMs > 0
+        ? Math.round(totals.savedMs)
+        : count * SAVED_TIME_PER_BLOCK_MS;
+    if (count === 0 && savedMs === 0) continue;
+    next[dayKey] = { count, savedMs };
+  }
+  return next;
 }
 
 async function pickNextReadingListEntry(options = {}) {

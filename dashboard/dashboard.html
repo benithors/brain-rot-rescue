@@ -97,20 +97,23 @@
           </div>
         </div>
 
-        <!-- DECORATIVE CHART AREA (Static for visuals) -->
+        <!-- LIVE TIME-SAVED STATS -->
         <div class="panel__chart">
-          <div class="chart-header">MISSION ACTIVITY OVERVIEW</div>
-          <div class="chart-visual">
-            <!-- Simple CSS bars or SVG line -->
-            <svg viewBox="0 0 300 50" class="chart-svg">
-              <polyline points="0,40 50,30 100,45 150,20 200,35 250,10 300,30" fill="none" stroke="currentColor"
-                stroke-width="1.5" />
-            </svg>
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">TIME SAVED / INTERCEPT LOG</div>
+              <div class="chart-sub">Tracks every blocked attempt and minutes reclaimed</div>
+            </div>
+            <div class="chart-metrics">
+              <span class="chip" id="metric-attempts">--</span>
+              <span class="chip chip--accent" id="metric-saved">--</span>
+            </div>
           </div>
-          <div class="chart-labels">
-            <span>JAN 28, 2025</span>
-            <span>FEB 28, 2025</span>
+          <div class="chart-visual chart-visual--bars">
+            <div class="bar-chart" id="block-chart"></div>
           </div>
+          <div class="chart-labels" id="block-chart-labels"></div>
+          <div class="chart-footnote" id="block-chart-footnote">Waiting for first intercept…</div>
         </div>
       </section>
 
