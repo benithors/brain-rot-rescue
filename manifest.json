@@ -45,9 +45,15 @@
         "focus/focus.js",
         "focus/focus.css",
         "content/overlay.css",
-        "shared/hold-to-override.js"
+        "shared/hold-to-override.js",
+        "dashboard/dashboard.html",
+        "dashboard/dashboard.js",
+        "dashboard/dashboard.css"
       ],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "chrome_url_overrides": {
+    "newtab": "dashboard/dashboard.html"
+  }
 }
