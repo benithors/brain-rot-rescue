@@ -1,80 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Focus Dashboard</title>
-    <link rel="stylesheet" href="dashboard.css" />
-  </head>
-  <body>
-    <div class="sky"></div>
-    <main class="shell">
-      <header class="hero">
-        <div class="hero__copy">
-          <p class="pill">Intentional Mode</p>
-          <h1>Stay on track.</h1>
-          <p class="lede" id="hero-lede"></p>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AGENT DATA OVERVIEW</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="screen-overlay"></div>
+  <div class="container">
+    <!-- HEADER -->
+    <header class="top-bar">
+      <div class="top-bar__left">
+        <button class="icon-btn" aria-label="Back">&lt;&lt;</button>
+      </div>
+      <div class="top-bar__center">
+        <h1>AGENT DATA OVERVIEW</h1>
+        <div class="sub-header">Last Update <span id="clock-label">--:--:--</span></div>
+      </div>
+      <div class="top-bar__right">
+        <span class="status-dot"></span>
+        <span class="status-dot"></span>
+        <span class="status-dot"></span>
+      </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="main-grid">
+
+      <!-- LEFT COLUMN: READING LIST (INTEL) -->
+      <section class="panel panel--left">
+        <div class="panel__header">
+          <h2>INTEL ARCHIVES</h2>
+          <div class="panel__stats">
+            <span>190</span>
+            <span>990</span>
+            <span>290</span>
+          </div>
+          <div class="panel__sub-labels">
+            <span>Active</span>
+            <span>Archived</span>
+            <span>Pending</span>
+          </div>
         </div>
-        <div class="hero__clock" aria-label="Current time">
-          <div class="clock" role="presentation">
-            <div class="clock__face">
-              <div class="clock__numbers" aria-hidden="true">
-                <span data-angle="0">12</span>
-                <span data-angle="90">3</span>
-                <span data-angle="180">6</span>
-                <span data-angle="270">9</span>
-              </div>
-              <div class="clock__hand clock__hand--hour" data-hand="hour"></div>
-              <div class="clock__hand clock__hand--minute" data-hand="minute"></div>
-              <div class="clock__hand clock__hand--second" data-hand="second"></div>
-              <div class="clock__pivot"></div>
+
+        <div class="panel__content">
+          <div class="list-header">
+            <span>ID</span>
+            <span>SOURCE DATA</span>
+          </div>
+          <div id="reading-list" class="data-list">
+            <!-- JS will populate this -->
+          </div>
+          <div id="reading-empty" class="empty-state" hidden>
+            > NO INTEL FOUND.
+          </div>
+        </div>
+
+        <div class="panel__footer">
+          <button id="refresh-reading" class="action-btn">[ REFRESH DATA ]</button>
+        </div>
+      </section>
+
+      <!-- CENTER COLUMN: TO-DO (MISSION LOG) -->
+      <section class="panel panel--center">
+        <div class="panel__header">
+          <h2>MISSION LOG</h2>
+        </div>
+
+        <div class="panel__content">
+          <!-- INPUT AREA -->
+          <form id="todo-form" class="cmd-line">
+            <span class="prompt">></span>
+            <input id="todo-input" type="text" name="todo" placeholder="INPUT DIRECTIVE..." autocomplete="off" />
+            <button type="submit" hidden>EXECUTE</button>
+          </form>
+
+          <div class="divider"></div>
+
+          <!-- LIST AREA -->
+          <div class="log-container">
+            <div class="log-header">
+              <label class="toggle">
+                <input type="checkbox" id="toggle-done" />
+                <span>[ SHOW COMPLETED ]</span>
+              </label>
+            </div>
+            <ul id="todo-list" class="log-list">
+              <!-- JS will populate this -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- DECORATIVE CHART AREA (Static for visuals) -->
+        <div class="panel__chart">
+          <div class="chart-header">MISSION ACTIVITY OVERVIEW</div>
+          <div class="chart-visual">
+            <!-- Simple CSS bars or SVG line -->
+            <svg viewBox="0 0 300 50" class="chart-svg">
+              <polyline points="0,40 50,30 100,45 150,20 200,35 250,10 300,30" fill="none" stroke="currentColor"
+                stroke-width="1.5" />
+            </svg>
+          </div>
+          <div class="chart-labels">
+            <span>JAN 28, 2025</span>
+            <span>FEB 28, 2025</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: OVERRIDE (SYSTEM CONTROL) -->
+      <section class="panel panel--right">
+        <div class="panel__header">
+          <h2>SYSTEM CONTROL</h2>
+        </div>
+
+        <div class="panel__content">
+          <div class="ascii-clock" id="ascii-clock"></div>
+
+          <div class="terminal-output">
+            <div class="terminal-line"># SYSTEM STATUS: <span class="status-ok">SECURE</span></div>
+            <div class="terminal-line">> FOCUS PROTOCOL: <span class="status-active">ACTIVE</span></div>
+            <div class="terminal-line">> UPTIME: 04:20:00</div>
+          </div>
+
+          <div class="override-section" id="override-card">
+            <div class="terminal-line">> <span id="override-title">OVERRIDE CONTROLS</span></div>
+            <div class="terminal-line muted" id="override-hint">Awaiting input...</div>
+
+            <div class="override-action">
+              <button type="button" id="override-button" class="hold-btn">
+                <span class="btn-glitch"></span>
+                <span data-role="hold-label" class="btn-text">INITIATE OVERRIDE</span>
+              </button>
             </div>
           </div>
-          <p class="clock__label" id="clock-label" aria-live="polite"></p>
-        </div>
-        <div class="hero__override" id="override-card">
-          <p class="pill pill--ghost" id="override-pill"></p>
-          <p class="override__title" id="override-title"></p>
-          <p class="override__hint" id="override-hint"></p>
-          <button type="button" id="override-button" class="hold-btn">
-            <span data-role="hold-label"></span>
-          </button>
-        </div>
-      </header>
 
-      <section class="panel panel--reading" aria-labelledby="reading-heading">
-        <div class="panel__header">
-          <div>
-            <p class="pill pill--ghost">Reading List</p>
-            <h2 id="reading-heading">Pick an intentional read</h2>
+          <div class="logs-preview">
+            <div class="log-entry">> [SYS] :: Checking integrity...</div>
+            <div class="log-entry">> [SYS] :: 100% Complete</div>
           </div>
-          <button class="ghost-btn" id="refresh-reading" type="button">Refresh</button>
         </div>
-        <div id="reading-empty" class="empty" hidden>
-          <p>Your Reading List is empty.</p>
-          <p class="muted">Save a couple of gems, then drop back here when you need a reset.</p>
-        </div>
-        <div id="reading-list" class="reading-grid" role="list"></div>
       </section>
 
-      <section class="panel panel--todos" aria-labelledby="todo-heading">
-        <div class="panel__header">
-          <div>
-            <p class="pill pill--ghost">Today</p>
-            <h2 id="todo-heading">Light to-do list</h2>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-done" />
-            <span>Show completed</span>
-          </label>
-        </div>
-        <form id="todo-form" class="todo-form">
-          <input id="todo-input" type="text" name="todo" placeholder="Quick capture…" autocomplete="off" />
-          <button type="submit">Add</button>
-        </form>
-        <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
-      </section>
     </main>
-    <script type="module" src="dashboard.js"></script>
-  </body>
+  </div>
+  <script type="module" src="dashboard.js"></script>
+</body>
+
 </html>
