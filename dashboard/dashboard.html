@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Focus Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <div class="sky"></div>
+    <main class="shell">
+      <header class="hero">
+        <div class="hero__copy">
+          <p class="pill">Intentional Mode</p>
+          <h1>Stay on track.</h1>
+          <p class="lede" id="hero-lede"></p>
+        </div>
+        <div class="hero__clock" aria-label="Current time">
+          <div class="clock" role="presentation">
+            <div class="clock__face">
+              <div class="clock__numbers" aria-hidden="true">
+                <span data-angle="0">12</span>
+                <span data-angle="90">3</span>
+                <span data-angle="180">6</span>
+                <span data-angle="270">9</span>
+              </div>
+              <div class="clock__hand clock__hand--hour" data-hand="hour"></div>
+              <div class="clock__hand clock__hand--minute" data-hand="minute"></div>
+              <div class="clock__hand clock__hand--second" data-hand="second"></div>
+              <div class="clock__pivot"></div>
+            </div>
+          </div>
+          <p class="clock__label" id="clock-label" aria-live="polite"></p>
+        </div>
+        <div class="hero__override" id="override-card">
+          <p class="pill pill--ghost" id="override-pill"></p>
+          <p class="override__title" id="override-title"></p>
+          <p class="override__hint" id="override-hint"></p>
+          <button type="button" id="override-button" class="hold-btn">
+            <span data-role="hold-label"></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="panel panel--reading" aria-labelledby="reading-heading">
+        <div class="panel__header">
+          <div>
+            <p class="pill pill--ghost">Reading List</p>
+            <h2 id="reading-heading">Pick an intentional read</h2>
+          </div>
+          <button class="ghost-btn" id="refresh-reading" type="button">Refresh</button>
+        </div>
+        <div id="reading-empty" class="empty" hidden>
+          <p>Your Reading List is empty.</p>
+          <p class="muted">Save a couple of gems, then drop back here when you need a reset.</p>
+        </div>
+        <div id="reading-list" class="reading-grid" role="list"></div>
+      </section>
+
+      <section class="panel panel--todos" aria-labelledby="todo-heading">
+        <div class="panel__header">
+          <div>
+            <p class="pill pill--ghost">Today</p>
+            <h2 id="todo-heading">Light to-do list</h2>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-done" />
+            <span>Show completed</span>
+          </label>
+        </div>
+        <form id="todo-form" class="todo-form">
+          <input id="todo-input" type="text" name="todo" placeholder="Quick capture…" autocomplete="off" />
+          <button type="submit">Add</button>
+        </form>
+        <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
+      </section>
+    </main>
+    <script type="module" src="dashboard.js"></script>
+  </body>
+</html>
