@@ -19,10 +19,11 @@
 
 ## Testing Guidelines
 - Manual test checklist (no automated tests yet):
-  - Visit a blocked domain → expect redirect to a Reading List item with overlay controls.
+  - Visit a blocked domain → expect redirect to an unread Reading List item with the in-page overlay (not the dashboard).
   - Use **Mark as read** → item disappears from Reading List.
   - Use **Load next** → rotates to a different unread item; no duplicate tab pairing.
   - Empty Reading List → focus page appears; hold-to-override requires the full duration (default 5s).
+  - Chrome new tab override still shows `dashboard.html`; blocked navigations use the overlay/focus flow.
   - After a successful override, revisit within 15 minutes → domain should be allowed until cooldown expires.
 
 ## Commit & Pull Request Guidelines

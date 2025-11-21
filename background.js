@@ -134,7 +134,20 @@ chrome.webNavigation.onBeforeNavigate.addListener(
       console.error('Failed to record block attempt', error);
     });
 
-    await sendTabToDashboard(tabId, blockedHost, details.url);
+    const nextEntry = await pickNextReadingListEntry();
+    if (nextEntry) {
+      try {
+        await redirectTabToEntry(tabId, blockedHost, details.url, nextEntry);
+      } catch (error) {
+        console.error('Failed to redirect to reading list entry', error);
+        await sendTabToFallback(tabId, blockedHost, details.url);
+      }
+      return;
+    }
+
+    interceptSessions.delete(tabId);
+    allowedNavigations.delete(tabId);
+    await sendTabToFallback(tabId, blockedHost, details.url);
   },
   { url: [{ schemes: ['http', 'https'] }] }
 );

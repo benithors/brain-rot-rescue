@@ -25,7 +25,6 @@ const overrideButton = document.getElementById('override-button');
 
 const readingListEl = document.getElementById('reading-list');
 const readingEmptyEl = document.getElementById('reading-empty');
-const refreshReadingBtn = document.getElementById('refresh-reading');
 
 const blockChartEl = document.getElementById('block-chart');
 const blockChartLabelsEl = document.getElementById('block-chart-labels');
@@ -273,7 +272,6 @@ function updateSummaryStats(stats, error) {
 
 function bindReadingList() {
   if (!readingListEl || !readingEmptyEl) return;
-  refreshReadingBtn?.addEventListener('click', loadReadingList);
   loadReadingList();
 }
 

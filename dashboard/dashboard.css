@@ -224,21 +224,6 @@ button {
 }
 
 .panel__footer {
-  padding: 12px;
-  border-top: 1px solid var(--border);
-  text-align: center;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  color: var(--fg);
-  font-size: 11px;
-  letter-spacing: 1px;
-}
-
-.action-btn:hover {
-  text-decoration: underline;
 }
 
 /* --- CENTER PANEL (TODO) --- */

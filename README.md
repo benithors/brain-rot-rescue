@@ -29,6 +29,14 @@ Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back in
    - If the list is empty, you'll see the focus page.
 5. Mark items as read when finished to prune the list, or hold the override button for 5 seconds if you truly need the destination. Overrides snooze that domain for 15 minutes.
 
+## Manual test checklist
+
+- Blocked navigation → redirects to an unread Reading List item with the in-page overlay (not the dashboard).
+- Overlay actions → **Mark as read** removes the item; **Load another** rotates to a different unread entry without duplicates.
+- Empty Reading List → focus page appears with the hold-to-override control (5s default).
+- Override behavior → After a successful override, revisit the domain within 15 minutes and confirm the cooldown keeps it unblocked.
+- New tab override → Opening a blank tab still loads `dashboard.html`; blocked site interceptions should continue to use the overlay/focus flow.
+
 ## Project structure
 
 ```
@@ -45,6 +53,6 @@ The codebase is pure JavaScript/CSS/HTML so you can edit and reload immediately�
 
 ## Ideas & next steps
 
-- Auto-sync overrides across devices via `chrome.storage.sync` if you bounce between machines.
-- Optional focus durations per domain or schedule-based rules.
-- Analytics-free streak tracking to visualize how often you convert distractions into intentional reading.
+- Sync overrides across devices (`chrome.storage.sync`): mirror the cooldown map with expirations, resolve conflicts by freshest `expiresAt`, and gate writes behind a simple version field to avoid clobbering active sessions.
+- Per-domain schedules: allow optional quiet-hours windows per blocked host; during those windows treat the host as blocked, otherwise honor local cooldowns and skip intercepts.
+- Streak tracking: reuse block event data to compute per-day streaks (consecutive days with ≥1 successful swap), persist lightweight counters locally, and surface them in the dashboard without sending any telemetry.
