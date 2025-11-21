@@ -161,6 +161,7 @@
 .brr-hold-btn .brr-hold-text {
   position: relative;
   z-index: 1;
+  font-family: monospace;
 }
 
 .brr-hold-btn:disabled {

@@ -1,4 +1,5 @@
 import { attachHoldToOverride } from '../shared/hold-to-override.js';
+import { getAsciiLabel } from '../shared/ascii-progress.js';
 
 const params = new URLSearchParams(window.location.search);
 const blockedHost = params.get('blocked') || 'this site';
@@ -48,7 +49,7 @@ async function initialize() {
       durationMs: holdDurationMs,
       progressVar: '--focus-hold-progress',
       completedLabel: 'Redirecting…',
-      formatLabel: ({ remainingMs }) => `Keep holding… ${Math.ceil(remainingMs / 1000)}s`,
+      formatLabel: getAsciiLabel,
       onComplete: () => requestOverride(),
       onError: (error) => setStatus(error.message || 'Unable to override right now.', true)
     });

@@ -1,4 +1,5 @@
 import { attachHoldToOverride } from '../shared/hold-to-override.js';
+import { getAsciiLabel } from '../shared/ascii-progress.js';
 
 const params = new URLSearchParams(window.location.search);
 const blockedHost = params.get('blocked') || '';
@@ -96,7 +97,7 @@ function setupOverride() {
     durationMs: holdDurationMs,
     progressVar: '--hold-progress',
     completedLabel: 'ACCESS GRANTED',
-    formatLabel: ({ remainingMs }) => `HOLD TO BYPASS... ${Math.ceil(remainingMs / 1000)}s`,
+    formatLabel: getAsciiLabel,
     onFinalize: () => {
       overrideButton.classList.add('hold-btn--active');
     },
@@ -218,8 +219,8 @@ function renderBlockStats(stats, error) {
       maxSaved > 0
         ? Math.max(8, Math.round((savedMs / maxSaved) * 100))
         : attempts
-        ? 12
-        : 4;
+          ? 12
+          : 4;
     bar.style.height = `${Math.min(100, height)}%`;
     bar.title = `${formatDayLabel(day.day)} · ${attempts} attempt${plural(
       attempts

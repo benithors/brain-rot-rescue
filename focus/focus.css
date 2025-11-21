@@ -62,7 +62,7 @@ body {
   line-height: 1.6;
 }
 
-.focus-steps li + li {
+.focus-steps li+li {
   margin-top: 6px;
 }
 
@@ -131,6 +131,7 @@ body {
 .focus-hold-btn span {
   position: relative;
   z-index: 1;
+  font-family: monospace;
 }
 
 .focus-hold-btn:disabled {

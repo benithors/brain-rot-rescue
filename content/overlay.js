@@ -141,8 +141,8 @@
   async function setupHoldButton(button, session, statusEl) {
     if (!button) return;
     const { attachHoldToOverride } = await holdHelperPromise;
+    const { getAsciiLabel } = await import(chrome.runtime.getURL('shared/ascii-progress.js'));
     const duration = session.holdDurationMs || 5000;
-    const formatLabel = ({ remainingMs }) => `Keep holding… ${Math.ceil(remainingMs / 1000)}s`;
     const onComplete = async () => {
       const response = await chrome.runtime.sendMessage({ type: 'overlay:override' });
       if (response?.status !== 'ok') {
@@ -153,7 +153,7 @@
       durationMs: duration,
       progressVar: '--brr-hold-progress',
       completedLabel: 'Releasing…',
-      formatLabel,
+      formatLabel: getAsciiLabel,
       onFinalize: () => {
         setStatus(statusEl, 'Override granted. Redirecting…', STATUS_CLASS_SUCCESS);
         button.classList.add(HOLD_SUCCESS_CLASS);
