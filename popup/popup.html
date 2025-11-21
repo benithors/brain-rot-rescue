@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brain-Rot Rescue</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div>
+          <p class="popup-label">Brain-Rot Rescue</p>
+          <h1>Focus Mode</h1>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-enabled" />
+          <span class="track"></span>
+          <span class="toggle-label">Active</span>
+        </label>
+      </header>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>Saved reading</h2>
+          <button class="btn btn-secondary" id="quick-add">Add current tab</button>
+        </div>
+        <p class="section-copy">
+          Quickly stash the page you're on into Chrome's Reading List so it can rescue you next time.
+        </p>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <h2>Blocklist</h2>
+        </div>
+        <ul id="blocklist" class="list"></ul>
+        <form id="blocklist-form" class="block-form">
+          <input type="text" id="block-input" placeholder="e.g. twitter.com" autocomplete="off" />
+          <button type="submit" class="btn">Add</button>
+        </form>
+      </section>
+
+      <section class="section" id="cooldowns-wrapper">
+        <div class="section-heading">
+          <h2>Temporary passes</h2>
+        </div>
+        <p class="section-copy" id="cooldowns-empty">No overrides are active.</p>
+        <ul id="cooldowns" class="list list--inline"></ul>
+      </section>
+
+      <p class="status" id="popup-status" role="status" aria-live="polite" hidden></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

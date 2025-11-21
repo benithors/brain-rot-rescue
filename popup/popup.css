@@ -1,0 +1,267 @@
+:root {
+  color-scheme: light dark;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  max-width: 360px;
+  background: #040b17;
+  color: #f4f7ff;
+}
+
+.popup-shell {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.popup-label {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(244, 247, 255, 0.6);
+}
+
+.popup-header h1 {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+
+.section {
+  border: 1px solid rgba(244, 247, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(244, 247, 255, 0.75);
+}
+
+.section-copy {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: rgba(244, 247, 255, 0.7);
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(120deg, #5bf7a5, #4fd1ff);
+  color: #041218;
+  font-size: 13px;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(244, 247, 255, 0.3);
+  color: #f4f7ff;
+}
+
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle .track {
+  width: 42px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(244, 247, 255, 0.25);
+  position: relative;
+  transition: background 160ms ease;
+}
+
+.toggle .track::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  top: 2px;
+  left: 2px;
+  transition: transform 160ms ease;
+}
+
+.toggle input:checked + .track {
+  background: linear-gradient(120deg, #5bf7a5, #4fd1ff);
+}
+
+.toggle input:checked + .track::after {
+  transform: translateX(20px);
+}
+
+.toggle-label {
+  font-size: 13px;
+}
+
+.list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(244, 247, 255, 0.06);
+  font-size: 14px;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.list-item .host {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-empty {
+  padding: 6px 0;
+  color: rgba(244, 247, 255, 0.6);
+  font-size: 13px;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  color: rgba(244, 247, 255, 0.7);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.icon-btn:hover {
+  color: #ff8f8f;
+}
+
+.block-form {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.block-form input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 247, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.list--inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cooldown-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(98, 118, 255, 0.15);
+  font-size: 13px;
+}
+
+.cooldown-pill button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.status {
+  margin: 0;
+  font-size: 13px;
+  color: #5bf7a5;
+  text-align: center;
+}
+
+.status.error {
+  color: #ff8f8f;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background: #ffffff;
+    color: #081120;
+  }
+  .section {
+    background: rgba(8, 17, 32, 0.02);
+    border-color: rgba(8, 17, 32, 0.08);
+  }
+  .popup-label,
+  .section-copy {
+    color: rgba(8, 17, 32, 0.6);
+  }
+  .section-heading h2 {
+    color: rgba(8, 17, 32, 0.75);
+  }
+  .btn-secondary {
+    color: #081120;
+    border-color: rgba(8, 17, 32, 0.15);
+  }
+  .block-form input {
+    background: rgba(8, 17, 32, 0.04);
+    border-color: rgba(8, 17, 32, 0.08);
+    color: #081120;
+  }
+  .icon-btn {
+    color: rgba(8, 17, 32, 0.65);
+  }
+  .icon-btn:hover {
+    color: #d43a3a;
+  }
+  .cooldown-pill {
+    background: rgba(8, 17, 32, 0.06);
+  }
+  .status {
+    color: #0b6b4c;
+  }
+}
