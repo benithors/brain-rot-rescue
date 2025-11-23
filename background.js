@@ -778,14 +778,32 @@ function normalizeBookmarkKey(value) {
 
 function normalizeBookmarkUrl(value) {
   if (typeof value !== 'string') return '';
+  const isLikelyHttpHost = (host) =>
+    Boolean(host) && host.length <= 255 && /^[a-z0-9.-]+$/i.test(host) && (host.includes('.') || host === 'localhost');
+
+  const tryParse = (candidate) => {
+    try {
+      const parsed = new URL(candidate.trim());
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+      if (!isLikelyHttpHost(parsed.hostname)) return '';
+      return parsed.toString();
+    } catch (_error) {
+      return '';
+    }
+  };
+
   const trimmed = value.trim();
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
-    return parsed.toString();
-  } catch (_error) {
-    return '';
+  if (!trimmed) return '';
+
+  const direct = tryParse(trimmed);
+  if (direct) return direct;
+
+  // Gracefully handle bare domains like "example.com" by assuming https.
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+    return tryParse(`https://${trimmed}`);
   }
+
+  return '';
 }
 
 function readableHost(url) {
