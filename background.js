@@ -14,7 +14,8 @@ const HOLD_TO_OVERRIDE_MS = 5000;
 const DEFAULT_SETTINGS = {
   enabled: true,
   blocklist: DEFAULT_BLOCKLIST,
-  cooldownMinutes: DEFAULT_COOLDOWN_MINUTES
+  cooldownMinutes: DEFAULT_COOLDOWN_MINUTES,
+  bookmarks: []
 };
 
 const SAVED_TIME_PER_BLOCK_MS = 5 * 60 * 1000; // Estimated focused time saved per block
@@ -328,6 +329,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const filtered = settings.blocklist.filter((item) => item !== normalized);
         await updateSettings({ blocklist: filtered });
         sendResponse({ status: 'ok' });
+        return;
+      }
+      case 'popup:add-bookmark': {
+        try {
+          const result = await addBookmark(message);
+          sendResponse(result);
+        } catch (error) {
+          sendResponse({ status: 'error', message: error.message });
+        }
+        return;
+      }
+      case 'popup:update-bookmark': {
+        try {
+          const result = await updateBookmark(message);
+          sendResponse(result);
+        } catch (error) {
+          sendResponse({ status: 'error', message: error.message });
+        }
+        return;
+      }
+      case 'popup:remove-bookmark': {
+        try {
+          const result = await removeBookmark(message?.id);
+          sendResponse(result);
+        } catch (error) {
+          sendResponse({ status: 'error', message: error.message });
+        }
         return;
       }
       case 'popup:quick-add-reading-entry': {
@@ -644,6 +672,11 @@ function mergeSettings(partial = {}) {
     : Array.isArray(base.blocklist)
     ? base.blocklist
     : DEFAULT_BLOCKLIST;
+  const bookmarksSource = Array.isArray(partial.bookmarks)
+    ? partial.bookmarks
+    : Array.isArray(base.bookmarks)
+    ? base.bookmarks
+    : [];
   const normalizedBlocklist = sanitizeBlocklist(blocklistSource);
   return {
     enabled: typeof partial.enabled === 'boolean' ? partial.enabled : base.enabled,
@@ -651,7 +684,8 @@ function mergeSettings(partial = {}) {
     cooldownMinutes:
       typeof partial.cooldownMinutes === 'number' && partial.cooldownMinutes > 0
         ? Math.min(120, Math.max(1, Math.round(partial.cooldownMinutes)))
-        : (base.cooldownMinutes || DEFAULT_COOLDOWN_MINUTES)
+        : (base.cooldownMinutes || DEFAULT_COOLDOWN_MINUTES),
+    bookmarks: sanitizeBookmarks(bookmarksSource)
   };
 }
 
@@ -712,4 +746,139 @@ function comparableUrl(url) {
   } catch (error) {
     return url;
   }
+}
+
+function sanitizeBookmarks(list) {
+  if (!Array.isArray(list)) return [];
+  const seenKeys = new Set();
+  const cleaned = [];
+  list.forEach((item) => {
+    const key = normalizeBookmarkKey(item?.key);
+    const url = normalizeBookmarkUrl(item?.url);
+    if (!key || !url) return;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+    cleaned.push({
+      id: typeof item?.id === 'string' && item.id ? item.id : createBookmarkId(),
+      title: typeof item?.title === 'string' && item.title.trim() ? item.title.trim() : readableHost(url),
+      url,
+      key
+    });
+  });
+  cleaned.sort((a, b) => a.key.localeCompare(b.key));
+  return cleaned;
+}
+
+function normalizeBookmarkKey(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim().toLowerCase();
+  if (trimmed.length !== 1) return '';
+  return /^[a-z0-9]$/.test(trimmed) ? trimmed : '';
+}
+
+function normalizeBookmarkUrl(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return parsed.toString();
+  } catch (_error) {
+    return '';
+  }
+}
+
+function readableHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch (_error) {
+    return url || '';
+  }
+}
+
+function createBookmarkId() {
+  try {
+    if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+  } catch (_error) {
+    // ignore
+  }
+  return `bm-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+async function addBookmark(payload) {
+  await initPromise;
+  const key = normalizeBookmarkKey(payload?.key);
+  const url = normalizeBookmarkUrl(payload?.url);
+  const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+  if (!key) throw new Error('Choose a one-letter key (a-z, 0-9).');
+  if (!url) throw new Error('Enter a valid http(s) URL.');
+  const existing = settings.bookmarks || [];
+  if (existing.some((item) => item.key === key)) {
+    throw new Error(`Key "${key}" is already in use.`);
+  }
+  const next = sanitizeBookmarks([
+    ...existing,
+    {
+      id: createBookmarkId(),
+      title: title || readableHost(url),
+      url,
+      key
+    }
+  ]);
+  return persistBookmarks(next);
+}
+
+async function updateBookmark(payload) {
+  await initPromise;
+  const id = typeof payload?.id === 'string' ? payload.id : '';
+  if (!id) throw new Error('Missing bookmark id.');
+  const existing = settings.bookmarks || [];
+  const current = existing.find((item) => item.id === id);
+  if (!current) throw new Error('Bookmark not found.');
+
+  const key = payload?.key ? normalizeBookmarkKey(payload.key) : current.key;
+  const url = payload?.url ? normalizeBookmarkUrl(payload.url) : current.url;
+  const title =
+    typeof payload?.title === 'string' && payload.title.trim()
+      ? payload.title.trim()
+      : current.title;
+
+  if (!key) throw new Error('Choose a one-letter key (a-z, 0-9).');
+  if (!url) throw new Error('Enter a valid http(s) URL.');
+
+  if (existing.some((item) => item.id !== id && item.key === key)) {
+    throw new Error(`Key "${key}" is already in use.`);
+  }
+
+  const next = sanitizeBookmarks(
+    existing.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            title,
+            url,
+            key
+          }
+        : item
+    )
+  );
+
+  return persistBookmarks(next);
+}
+
+async function removeBookmark(id) {
+  await initPromise;
+  const targetId = typeof id === 'string' ? id : '';
+  if (!targetId) throw new Error('Missing bookmark id.');
+  const existing = settings.bookmarks || [];
+  const next = existing.filter((item) => item.id !== targetId);
+  return persistBookmarks(sanitizeBookmarks(next));
+}
+
+function persistBookmarks(list) {
+  settings = { ...settings, bookmarks: list };
+  return updateSettings({ bookmarks: list }).then(() => ({
+    status: 'ok',
+    bookmarks: list
+  }));
 }

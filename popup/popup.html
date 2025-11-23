@@ -32,6 +32,71 @@
 
       <section class="section">
         <div class="section-heading">
+          <h2>Bookmarks</h2>
+          <span class="section-hint">Press key on dashboard</span>
+        </div>
+        <p class="section-copy" id="bookmark-subcopy">
+          Build a dashboard shortcut without guessing which key is free. You can also pull the current tab in one tap.
+        </p>
+
+        <ul id="bookmarks" class="list list--bookmarks"></ul>
+
+        <div class="bookmark-builder">
+          <div class="bookmark-builder__header">
+            <div class="eyebrow">New quick link</div>
+            <button type="button" class="btn btn-secondary" id="bookmark-use-tab">Use current tab</button>
+          </div>
+
+          <form id="bookmark-form" class="bookmark-form">
+            <div class="bookmark-row">
+              <label class="field">
+                <span class="field-label">Title</span>
+                <input type="text" id="bookmark-title" placeholder="Optional" autocomplete="off" />
+              </label>
+            </div>
+
+            <div class="bookmark-row">
+              <label class="field">
+                <span class="field-label">URL</span>
+                <input type="url" id="bookmark-url" placeholder="https://example.com/article" autocomplete="off" required />
+              </label>
+            </div>
+
+            <div class="bookmark-row bookmark-row--keys">
+              <div class="key-chooser">
+                <div class="key-chooser__head">
+                  <span class="field-label">Dashboard key</span>
+                  <span class="pill pill--muted" id="bookmark-key-status">Pick a key</span>
+                </div>
+                <div id="bookmark-key-suggestions" class="key-suggestions"></div>
+                <div class="key-input">
+                  <label for="bookmark-key">Enter or tap a suggestion</label>
+                  <input
+                    type="text"
+                    id="bookmark-key"
+                    maxlength="1"
+                    inputmode="text"
+                    autocomplete="off"
+                    placeholder="a"
+                  />
+                </div>
+              </div>
+
+              <div class="bookmark-buttons">
+                <button type="button" class="btn btn-secondary" id="bookmark-cancel" hidden>Cancel</button>
+                <button type="submit" class="btn" id="bookmark-submit">Save link</button>
+              </div>
+            </div>
+          </form>
+
+          <p class="section-copy" id="bookmark-help">
+            Keys are single letters/numbers used on the dashboard. Hold Shift while pressing a key to open in a new tab.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
           <h2>Blocklist</h2>
         </div>
         <ul id="blocklist" class="list"></ul>

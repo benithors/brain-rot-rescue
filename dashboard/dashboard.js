@@ -46,11 +46,14 @@ const recurringResetEl = document.getElementById('recurring-reset-label');
 
 const clockLabel = document.getElementById('clock-label');
 const asciiClockEl = document.getElementById('ascii-clock');
+const bookmarkListEl = document.getElementById('bookmark-list');
+const bookmarkEmptyEl = document.getElementById('bookmark-empty');
 
 let currentTabId = null;
 let todos = [];
 let showDone = false;
 let recurringTasks = [];
+let bookmarks = [];
 
 init();
 
@@ -64,6 +67,7 @@ async function init() {
   bindReadingList();
   bindRecurringTasks();
   bindTodos();
+  bindBookmarks();
 }
 
 async function resolveTab() {
@@ -497,6 +501,108 @@ async function markRecurringDone(taskId) {
   );
   await saveRecurringTasks();
   renderRecurringTasks();
+}
+
+function bindBookmarks() {
+  if (!bookmarkListEl || !bookmarkEmptyEl) return;
+  loadBookmarks();
+  document.addEventListener('keydown', handleBookmarkHotkey, true);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.settings) {
+      loadBookmarks();
+    }
+  });
+}
+
+async function loadBookmarks() {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'popup:get-state' });
+    if (response?.status !== 'ok') {
+      throw new Error(response?.message || 'BOOKMARKS UNAVAILABLE.');
+    }
+    const items = Array.isArray(response.settings?.bookmarks) ? response.settings.bookmarks : [];
+    bookmarks = items.sort((a, b) => a.key.localeCompare(b.key));
+    renderBookmarks();
+  } catch (error) {
+    bookmarks = [];
+    renderBookmarks(error);
+  }
+}
+
+function renderBookmarks(error) {
+  if (!bookmarkListEl || !bookmarkEmptyEl) return;
+  bookmarkListEl.innerHTML = '';
+  if (error || !bookmarks.length) {
+    bookmarkEmptyEl.hidden = false;
+    bookmarkEmptyEl.textContent = `> ${error?.message || 'NO BOOKMARKS YET.'}`;
+    return;
+  }
+  bookmarkEmptyEl.hidden = true;
+  bookmarks.forEach((bm) => {
+    const row = document.createElement('div');
+    row.className = 'bookmark-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'bookmark-meta';
+    const title = document.createElement('div');
+    title.className = 'bookmark-title';
+    title.textContent = bm.title || readableHost(bm.url);
+    const host = document.createElement('div');
+    host.className = 'bookmark-host';
+    host.textContent = readableHost(bm.url);
+    meta.append(title, host);
+
+    const actions = document.createElement('div');
+    actions.className = 'bookmark-actions';
+
+    const key = document.createElement('span');
+    key.className = 'bookmark-key';
+    key.textContent = bm.key.toUpperCase();
+
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'bookmark-open';
+    openBtn.textContent = '[ OPEN ]';
+    openBtn.addEventListener('click', () => openBookmark(bm, { newTab: false }));
+
+    actions.append(openBtn, key);
+    row.append(meta, actions);
+    bookmarkListEl.appendChild(row);
+  });
+}
+
+function handleBookmarkHotkey(event) {
+  if (!bookmarks.length) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const target = event.target;
+  if (target) {
+    const tag = target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
+  }
+  const key = typeof event.key === 'string' ? event.key.toLowerCase() : '';
+  if (!key || key.length !== 1) return;
+  const bookmark = bookmarks.find((bm) => bm.key === key);
+  if (!bookmark) return;
+  event.preventDefault();
+  openBookmark(bookmark, { newTab: event.shiftKey });
+}
+
+function openBookmark(bookmark, options = {}) {
+  const newTab = Boolean(options.newTab);
+  const url = bookmark.url;
+  if (newTab) {
+    chrome.tabs.create({ url }).catch((_error) => {
+      window.open(url, '_blank', 'noopener');
+    });
+    return;
+  }
+  if (currentTabId) {
+    chrome.tabs
+      .update(currentTabId, { url })
+      .catch((_error) => window.open(url, '_blank', 'noopener'));
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
 }
 
 function bindTodos() {
