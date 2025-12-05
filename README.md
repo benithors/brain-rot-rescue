@@ -1,13 +1,13 @@
 # Brain-Rot Rescue
 
-Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back into intentional reading. When you try to open a site on your blocklist, the extension instantly swaps in an unread item from Chrome's native Reading List. If the list is empty, it shows a gentle fallback screen with breathing room and the option to override.
+Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back into intentional reading. When you try to open a site on your blocklist, the extension now routes you to its main dashboard with override controls and your Reading List surfaced. If the list is empty, the dashboard shows an empty-state nudge and you can still trigger an override.
 
 ## Feature highlights
 
-- **Smart interception** – Blocked domains are detected via `chrome.webNavigation` and redirected to the oldest unread Reading List entry. Items currently displayed in other tabs are skipped so you never see the same article twice simultaneously.
-- **Overlay widget** – Articles open with a compact overlay that lets you mark the item as read (removes it from the Reading List), load a different saved piece, or hold for 5 seconds to reach the original site.
-- **Override cool-down** – Successful overrides pause blocking for that domain for 15 minutes, so the site stays reachable while you complete the task at hand.
-- **Empty-list fallback** – When no unread items exist, the custom focus page explains what happened, nudges you to save more, and exposes the same hold-to-override control.
+- **Smart interception** – Blocked domains are detected via `chrome.webNavigation` and redirected to the dashboard, which shows the threat context plus your Reading List and tasks.
+- **Dashboard override** – The hero card includes a hold-to-override button that grants a 15-minute cooldown for the blocked domain and returns you to the original URL.
+- **Reading List surface** – Open or clear saved items directly from the dashboard; it pulls from Chrome's native Reading List.
+- **Empty-list fallback** – When no unread items exist, the dashboard shows a calm empty state; the standalone focus page remains available as a backup.
 - **Actionable popup** – Manage the blocklist, flip the global on/off switch, view active overrides, and one-tap “Add current tab to Reading List” without leaving the toolbar.
 
 ## Install & run locally
@@ -24,25 +24,23 @@ Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back in
 1. Open the popup and ensure the guard is **Active**.
 2. Add or remove blocked domains as needed. Inputs normalize to bare hostnames (e.g. `twitter.com`).
 3. Use **Add current tab** whenever you find an article worth revisiting – it lands in the Chrome Reading List immediately.
-4. When you visit a blocked site:
-   - If unread entries exist, you'll land on one with the overlay widget.
-   - If the list is empty, you'll see the focus page.
-5. Mark items as read when finished to prune the list, or hold the override button for 5 seconds if you truly need the destination. Overrides snooze that domain for 15 minutes.
+4. When you visit a blocked site, you'll land on the dashboard with an override card and your Reading List. Open something intentional or hold to reach the original site.
+5. If the Reading List is empty, the dashboard shows an empty state; you can still hold to override. Overrides snooze that domain for 15 minutes.
 
 ## Manual test checklist
 
-- Blocked navigation → redirects to an unread Reading List item with the in-page overlay (not the dashboard).
-- Overlay actions → **Mark as read** removes the item; **Load another** rotates to a different unread entry without duplicates.
-- Empty Reading List → focus page appears with the hold-to-override control (5s default).
-- Override behavior → After a successful override, revisit the domain within 15 minutes and confirm the cooldown keeps it unblocked.
-- New tab override → Opening a blank tab still loads `dashboard.html`; blocked site interceptions should continue to use the overlay/focus flow.
+- Blocked navigation → lands on `dashboard.html` with the override card populated (not an auto-loaded article).
+- Override behavior → Holding the override button returns to the original URL and starts a 15-minute cooldown for that domain.
+- Reading List → Dashboard shows unread items; **[OPEN]** loads them in the same tab and **X** marks them read.
+- Empty Reading List → Dashboard shows the empty-state messaging; override remains available.
+- New tab override → Opening a blank tab still loads `dashboard.html`; blocked site interceptions keep using the dashboard flow.
 
 ## Project structure
 
 ```
 manifest.json          # MV3 manifest (service worker background, content script, popup)
 background.js          # Routing logic, storage, reading list orchestration, messaging
-content/overlay.js     # In-page overlay widget + styles
+content/overlay.js     # In-page overlay widget + styles (used when an article is opened via the extension)
 focus/                 # Empty-list fallback page (HTML/CSS/JS)
 popup/                 # Toolbar popup UI (HTML/CSS/JS)
 icons/                 # Simple vector-style PNG icons
