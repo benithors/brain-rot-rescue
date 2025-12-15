@@ -756,7 +756,7 @@ function formatMinutes(minutes) {
 function startAsciiClock() {
   if (!asciiClockEl) return;
 
-  const size = 13; // Diameter (odd number for center)
+  const size = 13;
   const center = Math.floor(size / 2);
   const radius = center;
 
@@ -764,19 +764,21 @@ function startAsciiClock() {
     const grid = Array.from({ length: size }, () => Array(size).fill(' '));
     const now = new Date();
 
-    // Draw Face
+    // Draw clean circle
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const dist = Math.sqrt(Math.pow(x - center, 2) + Math.pow(y - center, 2));
-        // Circle border
         if (dist >= radius - 0.5 && dist <= radius + 0.5) {
-          grid[y][x] = '.';
+          grid[y][x] = 'o';
         }
       }
     }
 
-    // Center
-    grid[center][center] = '+';
+    // Hour markers at cardinal positions
+    grid[0][center] = '12'.charAt(1); // Just show "2" at top for cleaner look
+    grid[center][size - 1] = '3';
+    grid[size - 1][center] = '6';
+    grid[center][0] = '9';
 
     // Calculate angles
     const seconds = now.getSeconds();
@@ -784,10 +786,10 @@ function startAsciiClock() {
     const hours = now.getHours() % 12;
 
     const secAngle = (seconds / 60) * 2 * Math.PI - Math.PI / 2;
-    const minAngle = (minutes / 60) * 2 * Math.PI - Math.PI / 2;
+    const minAngle = ((minutes + seconds / 60) / 60) * 2 * Math.PI - Math.PI / 2;
     const hourAngle = ((hours + minutes / 60) / 12) * 2 * Math.PI - Math.PI / 2;
 
-    // Draw Hands
+    // Draw hands
     const drawLine = (angle, length, char) => {
       for (let r = 1; r <= length; r += 0.5) {
         const x = Math.round(center + Math.cos(angle) * r);
@@ -798,14 +800,31 @@ function startAsciiClock() {
       }
     };
 
-    drawLine(secAngle, radius - 1, '.'); // Second hand
-    drawLine(minAngle, radius - 2, 'o'); // Minute hand
-    drawLine(hourAngle, radius - 3, 'O'); // Hour hand
+    drawLine(hourAngle, radius - 3, '#'); // Hour hand
+    drawLine(minAngle, radius - 2, '+');  // Minute hand  
+    drawLine(secAngle, radius - 1, '.');  // Second hand
 
-    // Re-draw center to ensure it's on top if needed, or just keep it
-    grid[center][center] = '+';
+    // Center
+    grid[center][center] = '*';
 
-    asciiClockEl.textContent = grid.map(row => row.join(' ')).join('\n');
+    // Build display
+    const clockFace = grid.map(row => row.join(' ')).join('\n');
+
+    // Digital time
+    const timeStr = now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+
+    const dateStr = now.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+
+    asciiClockEl.innerHTML = `<span class="clock-face">${clockFace}</span>\n<span class="clock-digital">${timeStr}</span>\n<span class="clock-date">${dateStr}</span>`;
   };
 
   updateClock();

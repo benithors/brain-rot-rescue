@@ -133,11 +133,9 @@ button {
 .stat-card {
   border: 1px solid var(--border);
   padding: 12px 10px;
-  background: linear-gradient(
-      180deg,
+  background: linear-gradient(180deg,
       rgba(255, 255, 255, 0.05),
-      rgba(255, 255, 255, 0.01)
-    );
+      rgba(255, 255, 255, 0.01));
   display: grid;
   grid-template-rows: auto auto;
   align-content: center;
@@ -223,8 +221,7 @@ button {
   color: var(--fg);
 }
 
-.panel__footer {
-}
+.panel__footer {}
 
 /* --- CENTER PANEL (TODO) --- */
 .cmd-line {
@@ -433,11 +430,9 @@ button {
   align-items: center;
   justify-content: center;
   position: relative;
-  background-image: linear-gradient(
-      to right,
+  background-image: linear-gradient(to right,
       var(--grid-line) 1px,
-      transparent 1px
-    ),
+      transparent 1px),
     linear-gradient(to top, var(--grid-line) 1px, transparent 1px);
   background-size: 22px 22px;
   padding: 0;
@@ -524,16 +519,52 @@ button {
 .ascii-clock {
   font-family: var(--font-mono);
   font-size: 10px;
-  line-height: 10px;
+  line-height: 1.15;
   white-space: pre;
   text-align: center;
   color: var(--fg);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 140px;
+  min-height: 220px;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  padding: 20px 12px;
+  border: 1px solid var(--border);
+  position: relative;
+  margin-top: 8px;
+}
+
+.ascii-clock::before {
+  content: '[ CLOCK ]';
+  position: absolute;
+  top: -1px;
+  left: 12px;
+  background: var(--bg);
+  padding: 0 6px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+.ascii-clock .clock-face {
+  color: var(--muted);
+}
+
+.ascii-clock .clock-digital {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--fg);
+  margin-top: 8px;
+}
+
+.ascii-clock .clock-date {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-top: 4px;
 }
 
 .terminal-output {
