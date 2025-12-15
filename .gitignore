@@ -28,3 +28,6 @@ build/
 # Temporary files
 *.tmp
 *.log
+
+# Extension keys
+keys/

@@ -3,6 +3,7 @@
   "name": "Brain-Rot Rescue",
   "description": "Replaces distracting sites with your Chrome Reading List and offers intentional override controls.",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAusWqgV1sbhkv6O9TWSWmkdJw5CjlKSKDBxnPom81KKl7q38O6PHACR/J6rzAoBBNbIXfdnvTbIqBOwRqPeVGqSnahf0UXOmx5QNjqhklLIlYxvvnLCPjynjjucb72eGsgqDhwJS3WaxgVdEqL+iA+XU9xZRWaUK88MZq5HEgEWjaMkuaeXoUvyRFXKPf26yRW79hqkJ8jm504vg70EnNpJJFl4HluzBs3gU92RpBtjzxuquDCUGGkAdJx974ZeJ34JSxM4VQ02ejrhwPPP6UK59V0WtdEyzQMeqUhtbsA0I0G/3JYtN1x5dSLsvqEkl3I5RuWQpbSzrR4gZISPoAOwIDAQAB",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
