@@ -1,3 +1,5 @@
+import { createSyncWriter } from './shared/sync-writer.js';
+
 const DEFAULT_BLOCKLIST = [
   'twitter.com',
   'x.com',
@@ -36,6 +38,18 @@ let blockDailyTotals = {};
 const interceptSessions = new Map(); // tabId -> session metadata
 const allowedNavigations = new Map(); // tabId -> comparableUrl currently allowed
 
+const syncWriter = createSyncWriter({
+  delayMs: 1500,
+  backlogKey: '__syncWriterBacklog_background',
+  onBytesQuotaExceeded: (payload) => {
+    const reduced = { ...payload };
+    return reduced;
+  },
+  onWriteError: (error) => {
+    console.warn('chrome.storage.sync write failed', error);
+  }
+});
+
 const initPromise = initializeState();
 
 async function initializeState() {
@@ -44,18 +58,43 @@ async function initializeState() {
     if (stored.settings) {
       settings = mergeSettings(stored.settings);
     } else {
-      await chrome.storage.sync.set({ settings });
+      await syncWriter.queueSet({ settings }, { flushNow: true });
     }
   } catch (error) {
     console.error('Failed to load settings', error);
   }
 
   try {
+    const storedSync = await chrome.storage.sync.get(['cooldowns', 'blockDailyTotals']);
+    cooldowns = cleanupCooldownMap(storedSync.cooldowns || {});
+    blockDailyTotals = sanitizeDailyTotals(storedSync.blockDailyTotals || {});
+  } catch (error) {
+    console.error('Failed to load synced stats', error);
+  }
+
+  try {
     const storedLocal = await chrome.storage.local.get(['cooldowns', 'blockEvents', 'blockDailyTotals']);
-    cooldowns = cleanupCooldownMap(storedLocal.cooldowns || {});
-    blockEvents = sanitizeBlockEvents(storedLocal.blockEvents || []);
-    blockDailyTotals = sanitizeDailyTotals(storedLocal.blockDailyTotals || {});
-    await chrome.storage.local.set({ cooldowns, blockEvents, blockDailyTotals });
+
+    const legacyCooldowns = cleanupCooldownMap(storedLocal.cooldowns || {});
+    const legacyTotals = sanitizeDailyTotals(storedLocal.blockDailyTotals || {});
+
+    const shouldMigrateCooldowns = !Object.keys(cooldowns).length && Object.keys(legacyCooldowns).length;
+    const shouldMigrateStats = !Object.keys(blockDailyTotals).length && Object.keys(legacyTotals).length;
+
+    if (shouldMigrateCooldowns) {
+      cooldowns = legacyCooldowns;
+    }
+    if (shouldMigrateStats) {
+      blockDailyTotals = legacyTotals;
+    }
+
+    if (shouldMigrateCooldowns || shouldMigrateStats) {
+      await syncWriter.queueSet({ cooldowns, blockDailyTotals }, { flushNow: true });
+    }
+
+    if (Object.keys(legacyCooldowns).length || Object.keys(legacyTotals).length) {
+      await chrome.storage.local.remove(['cooldowns', 'blockEvents', 'blockDailyTotals']);
+    }
   } catch (error) {
     console.error('Failed to load local state', error);
   }
@@ -63,7 +102,7 @@ async function initializeState() {
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
-    await chrome.storage.sync.set({ settings: clone(DEFAULT_SETTINGS) });
+    await syncWriter.queueSet({ settings: clone(DEFAULT_SETTINGS) }, { flushNow: true });
   }
 });
 
@@ -71,13 +110,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'sync' && changes.settings) {
     settings = mergeSettings(changes.settings.newValue || DEFAULT_SETTINGS);
   }
-  if (areaName === 'local' && changes.cooldowns) {
+  if (areaName === 'sync' && changes.cooldowns) {
     cooldowns = cleanupCooldownMap(changes.cooldowns.newValue || {});
   }
-  if (areaName === 'local' && changes.blockEvents) {
-    blockEvents = sanitizeBlockEvents(changes.blockEvents.newValue || []);
-  }
-  if (areaName === 'local' && changes.blockDailyTotals) {
+  if (areaName === 'sync' && changes.blockDailyTotals) {
     blockDailyTotals = sanitizeDailyTotals(changes.blockDailyTotals.newValue || {});
   }
 });
@@ -377,7 +413,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         delete cooldowns[normalized];
-        await chrome.storage.local.set({ cooldowns });
+        await syncWriter.queueSet({ cooldowns }, { flushNow: true });
         sendResponse({ status: 'ok' });
         return;
       }
@@ -461,7 +497,7 @@ async function startCooldown(blockedHost) {
   cleanupExpiredCooldowns();
   const expiresAt = Date.now() + settings.cooldownMinutes * 60 * 1000;
   cooldowns = { ...cooldowns, [blockedHost]: expiresAt };
-  await chrome.storage.local.set({ cooldowns });
+  await syncWriter.queueSet({ cooldowns }, { flushNow: true });
 }
 
 function isCooldownActive(blockedHost) {
@@ -486,7 +522,7 @@ function cleanupExpiredCooldowns() {
   const changed = Object.keys(cleaned).length !== Object.keys(cooldowns).length;
   cooldowns = cleaned;
   if (changed) {
-    chrome.storage.local.set({ cooldowns }).catch(() => {});
+    syncWriter.queueSet({ cooldowns }).catch(() => {});
   }
 }
 
@@ -496,7 +532,6 @@ async function recordBlockAttempt({ blockedHost, originalUrl }) {
   const event = {
     ts: now,
     host: blockedHost,
-    url: originalUrl,
     savedMs: SAVED_TIME_PER_BLOCK_MS
   };
   blockEvents.push(event);
@@ -513,9 +548,7 @@ async function recordBlockAttempt({ blockedHost, originalUrl }) {
 
   pruneBlockData();
 
-  await chrome.storage.local
-    .set({ blockEvents, blockDailyTotals })
-    .catch(() => {});
+  syncWriter.queueSet({ blockDailyTotals }, { flushNow: true }).catch(() => {});
 
   return event;
 }
@@ -593,7 +626,6 @@ function sanitizeBlockEvents(list, cutoffTs) {
     .map((item) => ({
       ts: item.ts,
       host: typeof item.host === 'string' ? item.host : '',
-      url: typeof item.url === 'string' ? item.url : '',
       savedMs:
         typeof item.savedMs === 'number' && item.savedMs > 0
           ? Math.round(item.savedMs)
@@ -656,7 +688,7 @@ async function updateSettings(partial) {
   await initPromise;
   const merged = mergeSettings({ ...settings, ...partial });
   settings = merged;
-  await chrome.storage.sync.set({ settings: merged });
+  await syncWriter.queueSet({ settings: merged }, { flushNow: true });
 }
 
 function mergeSettings(partial = {}) {

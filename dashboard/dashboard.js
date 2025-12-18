@@ -1,5 +1,6 @@
 import { attachHoldToOverride } from '../shared/hold-to-override.js';
 import { getAsciiLabel } from '../shared/ascii-progress.js';
+import { createSyncWriter } from '../shared/sync-writer.js';
 
 const params = new URLSearchParams(window.location.search);
 const blockedHost = params.get('blocked') || '';
@@ -55,7 +56,25 @@ let showDone = false;
 let recurringTasks = [];
 let bookmarks = [];
 
+const syncWriter = createSyncWriter({
+  delayMs: 800,
+  backlogKey: '__syncWriterBacklog_dashboard',
+  onWriteError: (error) => {
+    console.warn('chrome.storage.sync write failed', error);
+  }
+});
+
 init();
+
+window.addEventListener('pagehide', () => {
+  syncWriter.flush().catch(() => {});
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    syncWriter.flush().catch(() => {});
+  }
+});
 
 async function init() {
   // No hero lede in new design
@@ -365,13 +384,30 @@ async function loadRecurringTasks() {
   const today = getTodayKey();
   let stored = [];
   try {
-    const storedValue = await chrome.storage.local.get(RECURRING_STORAGE_KEY);
+    const storedValue = await chrome.storage.sync.get(RECURRING_STORAGE_KEY);
     stored = Array.isArray(storedValue[RECURRING_STORAGE_KEY])
       ? storedValue[RECURRING_STORAGE_KEY]
       : [];
   } catch (_error) {
     stored = [];
   }
+
+  if (!stored.length) {
+    try {
+      const legacyValue = await chrome.storage.local.get(RECURRING_STORAGE_KEY);
+      const legacyStored = Array.isArray(legacyValue[RECURRING_STORAGE_KEY])
+        ? legacyValue[RECURRING_STORAGE_KEY]
+        : [];
+      if (legacyStored.length) {
+        stored = legacyStored;
+        await chrome.storage.sync.set({ [RECURRING_STORAGE_KEY]: legacyStored });
+        await chrome.storage.local.remove(RECURRING_STORAGE_KEY);
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }
+
   recurringTasks = mergeRecurringDefaults(stored).map((task) => {
     const last = typeof task.lastCompletedOn === 'string' ? task.lastCompletedOn : null;
     return {
@@ -403,7 +439,7 @@ function mergeRecurringDefaults(stored) {
 
 async function saveRecurringTasks() {
   const payload = recurringTasks.map(({ errorMessage, ...task }) => task);
-  await chrome.storage.local.set({ [RECURRING_STORAGE_KEY]: payload });
+  await syncWriter.queueSet({ [RECURRING_STORAGE_KEY]: payload });
 }
 
 function renderRecurringTasks() {
@@ -622,7 +658,7 @@ function bindTodos() {
 
 async function loadTodos() {
   try {
-    const { dashboardTodos = [] } = await chrome.storage.local.get('dashboardTodos');
+    const { dashboardTodos = [] } = await chrome.storage.sync.get('dashboardTodos');
     todos = Array.isArray(dashboardTodos) ? dashboardTodos : [];
   } catch (_error) {
     todos = [];
@@ -631,7 +667,7 @@ async function loadTodos() {
 }
 
 async function saveTodos() {
-  await chrome.storage.local.set({ dashboardTodos: todos });
+  await syncWriter.queueSet({ dashboardTodos: todos });
 }
 
 function renderTodos() {
