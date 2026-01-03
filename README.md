@@ -2,6 +2,8 @@
 
 Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back into intentional reading. When you try to open a site on your blocklist, the extension now routes you to its main dashboard with override controls and your Reading List surfaced. If the list is empty, the dashboard shows an empty-state nudge and you can still trigger an override.
 
+License: MIT.
+
 ## Feature highlights
 
 - **Smart interception** – Blocked domains are detected via `chrome.webNavigation` and redirected to the dashboard, which shows the threat context plus your Reading List and tasks.
@@ -17,7 +19,7 @@ Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back in
 3. Select the project folder and confirm the Brain-Rot Rescue card appears.
 4. Pin the extension icon for quick access.
 
-> **Note:** The extension relies on Chrome's `readingList` permission. It must be installed in a Chromium build that supports the API (Chrome 115+ on desktop).
+> **Note:** The extension relies on Chrome's `readingList` permission. It must be installed in a Chromium build that supports the Reading List API.
 
 ## Using the extension
 
@@ -26,6 +28,12 @@ Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back in
 3. Use **Add current tab** whenever you find an article worth revisiting – it lands in the Chrome Reading List immediately.
 4. When you visit a blocked site, you'll land on the dashboard with an override card and your Reading List. Open something intentional or hold to reach the original site.
 5. If the Reading List is empty, the dashboard shows an empty state; you can still hold to override. Overrides snooze that domain for 15 minutes.
+
+## Profiles & sync behavior
+
+- The Reading List is scoped to the active Chrome profile. If you use multiple profiles/accounts, each one has its own list and the extension will only see the current profile's items.
+- Extension settings and cooldowns can sync across devices if you're signed into Chrome with Sync enabled, but they still remain scoped to the profile/account you're using.
+- The manifest `key` is pinned so the extension ID stays stable across unpacked installs, which is required for `chrome.storage.sync` to carry settings between devices.
 
 ## Manual test checklist
 
