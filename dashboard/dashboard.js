@@ -303,7 +303,7 @@ async function loadReadingList() {
   if (!readingListEl || !readingEmptyEl) return;
   try {
     const entries = await chrome.readingList.query({ hasBeenRead: false });
-    entries.sort((a, b) => (a.creationTime || 0) - (b.creationTime || 0));
+    entries.sort((a, b) => (b.creationTime || 0) - (a.creationTime || 0));
     renderReading(entries || []);
   } catch (error) {
     readingEmptyEl.hidden = false;
@@ -333,8 +333,10 @@ function renderReading(entries) {
     actions.className = 'reading-actions';
 
     const openBtn = document.createElement('button');
-    openBtn.className = 'btn-inline';
-    openBtn.textContent = '[ OPEN ]';
+    openBtn.className = 'btn-inline btn-inline--icon';
+    openBtn.textContent = '↗';
+    openBtn.title = 'Open';
+    openBtn.setAttribute('aria-label', 'Open');
     openBtn.addEventListener('click', () => navigate(entry.url));
 
     const markBtn = document.createElement('button');
@@ -370,8 +372,18 @@ async function navigate(url) {
   if (!currentTabId) return;
   try {
     await chrome.tabs.update(currentTabId, { url });
+    await keepEntryUnread(url);
   } catch (error) {
     console.error('Navigation failed', error);
+  }
+}
+
+async function keepEntryUnread(url) {
+  if (!url || !chrome?.readingList?.updateEntry) return;
+  try {
+    await chrome.readingList.updateEntry({ url, hasBeenRead: false });
+  } catch (error) {
+    console.warn('Failed to keep reading list entry unread', error);
   }
 }
 

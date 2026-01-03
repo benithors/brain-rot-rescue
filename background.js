@@ -130,6 +130,7 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 
   const currentUrl = comparableUrl(details.url);
   if (session.articleComparableUrl && currentUrl === session.articleComparableUrl) {
+    keepEntryUnread(session.article?.url);
     return;
   }
 
@@ -500,6 +501,15 @@ async function startCooldown(blockedHost) {
   await syncWriter.queueSet({ cooldowns }, { flushNow: true });
 }
 
+async function keepEntryUnread(url) {
+  if (!url || !chrome?.readingList?.updateEntry) return;
+  try {
+    await chrome.readingList.updateEntry({ url, hasBeenRead: false });
+  } catch (error) {
+    console.warn('Failed to keep reading list entry unread', error);
+  }
+}
+
 function isCooldownActive(blockedHost) {
   cleanupExpiredCooldowns();
   const expiresAt = cooldowns[blockedHost];
@@ -662,7 +672,7 @@ async function pickNextReadingListEntry(options = {}) {
     console.error('Failed to query reading list', error);
     return null;
   }
-  entries.sort((a, b) => (a.creationTime || 0) - (b.creationTime || 0));
+  entries.sort((a, b) => (b.creationTime || 0) - (a.creationTime || 0));
   const excludeSet = new Set();
   excludeUrls.forEach((url) => {
     const normalized = comparableUrl(url);
