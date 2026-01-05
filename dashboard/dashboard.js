@@ -38,9 +38,9 @@ const statSitesBlockedEl = document.getElementById('stat-sites-blocked');
 
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
-const todoListEl = document.getElementById('todo-list');
-const toggleDoneEl = document.getElementById('toggle-done');
-
+const listTodoEl = document.getElementById('list-todo');
+const listInProgressEl = document.getElementById('list-in-progress');
+const listDoneEl = document.getElementById('list-done');
 const recurringListEl = document.getElementById('recurring-list');
 const recurringEmptyEl = document.getElementById('recurring-empty');
 const recurringResetEl = document.getElementById('recurring-reset-label');
@@ -52,7 +52,6 @@ const bookmarkEmptyEl = document.getElementById('bookmark-empty');
 
 let currentTabId = null;
 let todos = [];
-let showDone = false;
 let recurringTasks = [];
 let bookmarks = [];
 
@@ -77,7 +76,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function init() {
-  // No hero lede in new design
   await resolveTab();
   setupOverride();
   attachClock();
@@ -661,17 +659,46 @@ function bindTodos() {
     addTodo(value);
     todoInput.value = '';
   });
-  toggleDoneEl?.addEventListener('change', (event) => {
-    showDone = event.target.checked;
-    renderTodos();
-  });
+
+  // Setup Drag and Drop for columns
+  [listTodoEl, listInProgressEl, listDoneEl].forEach(setupColumnDnD);
+  
   loadTodos();
+}
+
+function setupColumnDnD(columnEl) {
+  if (!columnEl) return;
+  
+  columnEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    columnEl.classList.add('drag-over');
+  });
+
+  columnEl.addEventListener('dragleave', () => {
+    columnEl.classList.remove('drag-over');
+  });
+
+  columnEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    columnEl.classList.remove('drag-over');
+    const id = e.dataTransfer.getData('text/plain');
+    const newStatus = columnEl.dataset.status;
+    if (id && newStatus) {
+      updateTodoStatus(id, newStatus);
+    }
+  });
 }
 
 async function loadTodos() {
   try {
     const { dashboardTodos = [] } = await chrome.storage.sync.get('dashboardTodos');
-    todos = Array.isArray(dashboardTodos) ? dashboardTodos : [];
+    // Migrate legacy 'done' boolean to 'status'
+    todos = (Array.isArray(dashboardTodos) ? dashboardTodos : []).map(t => {
+      if (!t.status) {
+        return { ...t, status: t.done ? 'done' : 'todo' };
+      }
+      return t;
+    });
   } catch (_error) {
     todos = [];
   }
@@ -683,40 +710,120 @@ async function saveTodos() {
 }
 
 function renderTodos() {
-  todoListEl.innerHTML = '';
-  const filtered = showDone ? todos : todos.filter((t) => !t.done);
-  if (!filtered.length) {
-    const empty = document.createElement('li');
-    empty.className = 'muted';
-    empty.style.padding = '8px';
-    empty.textContent = showDone ? '> NO LOGS FOUND.' : '> NO ACTIVE DIRECTIVES.';
-    todoListEl.appendChild(empty);
+  // Clear columns
+  if (listTodoEl) listTodoEl.innerHTML = '';
+  if (listInProgressEl) listInProgressEl.innerHTML = '';
+  if (listDoneEl) listDoneEl.innerHTML = '';
+
+  if (!todos.length) {
+    // Optional: Show empty state in Todo column?
     return;
   }
-  filtered.forEach((todo) => {
-    const item = document.createElement('li');
-    item.className = 'todo-item';
-    item.dataset.id = todo.id;
-    // Drag and drop logic removed for simplicity in this view, or can be re-added if needed.
-    // Keeping it simple for now to match the "log" aesthetic.
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = Boolean(todo.done);
-    checkbox.addEventListener('change', () => toggleTodo(todo.id, checkbox.checked));
-
-    const text = document.createElement('div');
-    text.textContent = todo.text;
-    text.className = todo.done ? 'todo-text_done' : '';
-    text.style.flex = '1';
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '[ DEL ]';
-    deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
-
-    item.append(checkbox, text, deleteBtn);
-    todoListEl.appendChild(item);
+  todos.forEach((todo) => {
+    const card = createKanbanCard(todo);
+    
+    switch (todo.status) {
+      case 'in-progress':
+        listInProgressEl?.appendChild(card);
+        break;
+      case 'done':
+        listDoneEl?.appendChild(card);
+        break;
+      default:
+        listTodoEl?.appendChild(card);
+        break;
+    }
   });
+}
+
+function createKanbanCard(todo) {
+  const card = document.createElement('div');
+  card.className = 'kanban-card';
+  card.draggable = true;
+  
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', todo.id);
+    card.classList.add('dragging');
+  });
+  
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+  });
+
+  const text = document.createElement('div');
+  text.className = 'kanban-card-text';
+  text.textContent = todo.text;
+  text.contentEditable = false;
+  text.spellcheck = false;
+
+  // Enable edit on double click
+  text.addEventListener('dblclick', () => {
+    text.contentEditable = true;
+    text.focus();
+    card.draggable = false;
+    card.classList.add('editing');
+  });
+
+  // Save and reset on blur
+  text.addEventListener('blur', () => {
+    text.contentEditable = false;
+    card.draggable = true;
+    card.classList.remove('editing');
+    
+    const newText = text.textContent.trim();
+    if (newText && newText !== todo.text) {
+      updateTodoText(todo.id, newText);
+    } else if (!newText) {
+      text.textContent = todo.text; // Revert if empty
+    }
+  });
+
+  // Handle Enter (save) and Escape (revert)
+  text.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      text.blur();
+    } else if (e.key === 'Escape') {
+      text.textContent = todo.text;
+      text.blur();
+    }
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'kanban-delete-btn';
+  delBtn.innerHTML = '×'; // or use an SVG icon if preferred
+  delBtn.title = 'Delete';
+  delBtn.onclick = (e) => {
+    e.stopPropagation(); // Prevent drag start if clicking delete
+    deleteTodo(todo.id);
+  };
+
+  card.append(text, delBtn);
+  return card;
+}
+
+function updateTodoText(id, text) {
+  todos = todos.map((t) => (t.id === id ? { ...t, text } : t));
+  saveTodos();
+  // We don't necessarily need to renderTodos here if the DOM is already updated,
+  // but it ensures consistency. Since this happens on blur, a re-render is safe.
+  renderTodos();
+}
+
+function cycleStatus(id, direction) {
+  const states = ['todo', 'in-progress', 'done'];
+  const todo = todos.find(t => t.id === id);
+  if (!todo) return;
+  
+  const currentIndex = states.indexOf(todo.status || 'todo');
+  let newIndex = currentIndex + direction;
+  
+  // Clamp
+  if (newIndex < 0) newIndex = 0;
+  if (newIndex >= states.length) newIndex = states.length - 1;
+  
+  updateTodoStatus(id, states[newIndex]);
 }
 
 function addTodo(text) {
@@ -731,7 +838,7 @@ function addTodo(text) {
   const next = {
     id: makeId(),
     text,
-    done: false,
+    status: 'todo',
     createdAt: Date.now()
   };
   todos = [next, ...todos];
@@ -739,8 +846,8 @@ function addTodo(text) {
   renderTodos();
 }
 
-function toggleTodo(id, done) {
-  todos = todos.map((t) => (t.id === id ? { ...t, done } : t));
+function updateTodoStatus(id, status) {
+  todos = todos.map((t) => (t.id === id ? { ...t, status } : t));
   saveTodos();
   renderTodos();
 }

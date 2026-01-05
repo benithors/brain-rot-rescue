@@ -381,10 +381,112 @@ button {
   font-size: 10px;
 }
 
-.todo-text_done {
-  text-decoration: line-through;
+/* --- KANBAN BOARD --- */
+.kanban-board {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.kanban-column {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.kanban-column h3 {
+  margin: 0;
+  padding: 8px;
+  font-size: 11px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  letter-spacing: 1px;
   color: var(--muted);
 }
+
+.kanban-list {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+/* Drag over visual cue */
+.kanban-list.drag-over {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kanban-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 8px 24px 8px 8px; /* Extra right padding for delete button */
+  font-size: 11px;
+  cursor: grab;
+  position: relative;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.kanban-card:hover {
+  border-color: var(--fg);
+}
+
+.kanban-card.dragging {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.kanban-card-text {
+  line-height: 1.4;
+  word-wrap: break-word;
+  outline: none;
+  border-radius: 2px;
+  padding: 2px;
+  margin: -2px; /* Offset padding to prevent layout shift */
+  transition: background 0.2s;
+}
+
+.kanban-card-text:focus {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent);
+  cursor: text;
+}
+
+.kanban-card.editing {
+  border-color: var(--accent);
+}
+
+.kanban-delete-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px; /* Larger icon */
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.kanban-card:hover .kanban-delete-btn {
+  opacity: 1;
+}
+
+.kanban-delete-btn:hover {
+  color: var(--fg); /* Highlight on hover */
+}
+
 
 /* Chart Area */
 .panel__chart {

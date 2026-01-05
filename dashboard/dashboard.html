@@ -57,7 +57,7 @@
           <!-- INPUT AREA -->
           <form id="todo-form" class="cmd-line">
             <span class="prompt">></span>
-            <input id="todo-input" type="text" name="todo" placeholder="ADD TASK..." autocomplete="off" />
+            <input id="todo-input" type="text" name="todo" placeholder="ADD TASK TO 'TODO' COLUMN..." autocomplete="off" />
             <button type="submit" hidden>EXECUTE</button>
           </form>
 
@@ -73,17 +73,20 @@
 
           <div class="divider"></div>
 
-          <!-- LIST AREA -->
-          <div class="log-container">
-            <div class="log-header">
-              <label class="toggle">
-                <input type="checkbox" id="toggle-done" />
-                <span>[ SHOW COMPLETED ]</span>
-              </label>
+          <!-- KANBAN BOARD -->
+          <div class="kanban-board">
+            <div class="kanban-column">
+              <h3>TODO</h3>
+              <div class="kanban-list" id="list-todo" data-status="todo"></div>
             </div>
-            <ul id="todo-list" class="log-list">
-              <!-- JS will populate this -->
-            </ul>
+            <div class="kanban-column">
+              <h3>IN PROGRESS</h3>
+              <div class="kanban-list" id="list-in-progress" data-status="in-progress"></div>
+            </div>
+            <div class="kanban-column">
+              <h3>DONE</h3>
+              <div class="kanban-list" id="list-done" data-status="done"></div>
+            </div>
           </div>
         </div>
 

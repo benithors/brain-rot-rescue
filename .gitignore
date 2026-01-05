@@ -28,6 +28,7 @@ build/
 # Temporary files
 *.tmp
 *.log
+.gemini-clipboard/
 
 # Extension keys
 keys/
