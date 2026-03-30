@@ -1,5 +1,7 @@
 # Brain-Rot Rescue
 
+<img width="400" height="400" alt="Brain-Rot Rescue app icon" src="app-icon.png" />
+
 Brain-Rot Rescue is a Chrome extension that diverts doom-scroll impulses back into intentional reading. When you try to open a site on your blocklist, the extension now routes you to its main dashboard with override controls and your Reading List surfaced. If the list is empty, the dashboard shows an empty-state nudge and you can still trigger an override.
 
 License: MIT.
